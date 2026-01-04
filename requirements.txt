@@ -1,0 +1,4 @@
+requests
+geopy
+python-geohash
+boto3
