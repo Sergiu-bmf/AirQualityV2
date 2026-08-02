@@ -25,6 +25,7 @@ HUMIDITY_MIN, HUMIDITY_MAX = 20, 90  # DHT11 rated range (%)
 SOUND_RAW_MIN, SOUND_RAW_MAX = 0, 1023  # 10-bit ADC range on Arduino Uno
 LIGHT_MIN, LIGHT_MAX = 0, 1023          # 10-bit ADC range for the LDR
 FLAME_RAW_MIN, FLAME_RAW_MAX = 0, 1023  # 10-bit ADC range for the flame sensor
+GAS_RAW_MIN, GAS_RAW_MAX = 0, 1023      # 10-bit ADC range for the MQ-135 gas sensor
 
 # ---------- ALERT THRESHOLDS (evaluated on the window AVERAGE, for logging/notifications) ----------
 # These are separate from the Arduino's own instant per-reading thresholds —
@@ -33,6 +34,9 @@ TEMP_ALERT_HIGH = 28.0
 HUMIDITY_ALERT_HIGH = 70.0
 SOUND_DB_ALERT_HIGH = 75.0
 FLAME_ALERT_ANY = True  # if True, any flame detection in the window triggers an alert
+# PLACEHOLDER — set this once you've measured your MQ-135's actual clean-air
+# baseline after its warm-up period. 400 is just a starting guess.
+GAS_ALERT_HIGH = 400
 
 # ---------- DB CONVERSION ----------
 def raw_to_db(raw_value):
@@ -57,18 +61,23 @@ def floats_to_decimal(obj):
     return obj
 
 
-# Matches: "Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Flame: 0, FlameRaw: 320"
-# Uses .*? between labels so it doesn't care what's in between
-# (handles the °C symbol regardless of encoding).
+# Matches with or without the "Gas:" field, since the Arduino sketch may not
+# have the gas sensor wired in yet:
+# "Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Gas: 250, Flame: 0, FlameRaw: 320"
+# "Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Flame: 0, FlameRaw: 320"
 LINE_PATTERN = re.compile(
     r"Humidity:\s*([\d.]+)%.*?Temperature:\s*([\d.]+).*?"
-    r"Sound Level:\s*(\d+).*?Light:\s*(\d+).*?Flame:\s*(\d).*?FlameRaw:\s*(\d+)"
+    r"Sound Level:\s*(\d+).*?Light:\s*(\d+)"
+    r"(?:.*?Gas:\s*(\d+))?.*?"
+    r"Flame:\s*(\d).*?FlameRaw:\s*(\d+)"
 )
 
 
 def parse_line(line):
     """Expects Arduino output like:
-    'Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Flame: 0, FlameRaw: 320'
+    'Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Gas: 250, Flame: 0, FlameRaw: 320'
+    (Gas field is optional — will be None if not present in the line, e.g.
+    before the gas sensor is physically installed.)
     """
     match = LINE_PATTERN.search(line)
     if not match:
@@ -78,14 +87,15 @@ def parse_line(line):
         temperature = float(match.group(2))
         sound_raw = int(match.group(3))
         light_raw = int(match.group(4))
-        flame = int(match.group(5))       # Arduino's own thresholded 0/1
-        flame_raw = int(match.group(6))   # raw ADC value, for logging/recalibration
-        return temperature, humidity, sound_raw, light_raw, flame, flame_raw
+        gas_raw = int(match.group(5)) if match.group(5) is not None else None
+        flame = int(match.group(6))       # Arduino's own thresholded 0/1
+        flame_raw = int(match.group(7))   # raw ADC value, for logging/recalibration
+        return temperature, humidity, sound_raw, light_raw, gas_raw, flame, flame_raw
     except ValueError:
         return None
 
 
-def is_valid_reading(temperature, humidity, sound_raw, light_raw, flame, flame_raw):
+def is_valid_reading(temperature, humidity, sound_raw, light_raw, gas_raw, flame, flame_raw):
     """Basic range/sanity checks. Rejects readings that are almost certainly
     glitches (sensor noise, disconnected wire, brownout, etc.) rather than
     real measurements. Adjust ranges as you learn your sensors' real behavior."""
@@ -97,6 +107,8 @@ def is_valid_reading(temperature, humidity, sound_raw, light_raw, flame, flame_r
         return False, f"sound_raw {sound_raw} out of range"
     if not (LIGHT_MIN <= light_raw <= LIGHT_MAX):
         return False, f"light_raw {light_raw} out of range"
+    if gas_raw is not None and not (GAS_RAW_MIN <= gas_raw <= GAS_RAW_MAX):
+        return False, f"gas_raw {gas_raw} out of range"
     if not (FLAME_RAW_MIN <= flame_raw <= FLAME_RAW_MAX):
         return False, f"flame_raw {flame_raw} out of range"
     if flame not in (0, 1):
@@ -104,7 +116,7 @@ def is_valid_reading(temperature, humidity, sound_raw, light_raw, flame, flame_r
     return True, None
 
 
-def check_alerts(avg_temp, avg_humidity, avg_sound_db, flame_detected_in_window):
+def check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_gas_raw, flame_detected_in_window):
     """Returns a list of human-readable alert messages for any threshold
     crossed by this window's averaged values. Empty list = all clear."""
     alerts = []
@@ -114,6 +126,8 @@ def check_alerts(avg_temp, avg_humidity, avg_sound_db, flame_detected_in_window)
         alerts.append(f"Humidity high: {avg_humidity:.1f}% (threshold {HUMIDITY_ALERT_HIGH}%)")
     if avg_sound_db is not None and avg_sound_db > SOUND_DB_ALERT_HIGH:
         alerts.append(f"Sound level high: {avg_sound_db:.1f}dB (threshold {SOUND_DB_ALERT_HIGH}dB)")
+    if avg_gas_raw is not None and avg_gas_raw > GAS_ALERT_HIGH:
+        alerts.append(f"Gas level high: {avg_gas_raw:.1f} raw (threshold {GAS_ALERT_HIGH})")
     if FLAME_ALERT_ANY and flame_detected_in_window:
         alerts.append("Flame detected during this window!")
     return alerts
@@ -179,7 +193,7 @@ def main():
     is_collecting = True
     phase_start = time.time()
     window_start_ts = int(phase_start)  # marks when the current collecting phase began
-    temps, humidities, sounds, lights, flame_raws = [], [], [], [], []
+    temps, humidities, sounds, lights, gases, flame_raws = [], [], [], [], [], []
     flame_detected_in_window = False
     rejected_count = 0
 
@@ -192,13 +206,17 @@ def main():
                 if parsed is None:
                     print(f"Skipping unparseable line: {raw_line.strip()}")
                 else:
-                    temperature, humidity, sound_raw, light_raw, flame, flame_raw = parsed
-                    valid, reason = is_valid_reading(temperature, humidity, sound_raw, light_raw, flame, flame_raw)
+                    temperature, humidity, sound_raw, light_raw, gas_raw, flame, flame_raw = parsed
+                    valid, reason = is_valid_reading(
+                        temperature, humidity, sound_raw, light_raw, gas_raw, flame, flame_raw
+                    )
                     if valid:
                         temps.append(temperature)
                         humidities.append(humidity)
                         sounds.append(sound_raw)
                         lights.append(light_raw)
+                        if gas_raw is not None:
+                            gases.append(gas_raw)
                         flame_raws.append(flame_raw)
                         if flame == 1:
                             flame_detected_in_window = True
@@ -219,12 +237,13 @@ def main():
                         avg_humidity = sum(humidities) / len(humidities)
                         avg_sound_raw = sum(sounds) / len(sounds)
                         avg_light_raw = sum(lights) / len(lights)
+                        avg_gas_raw = (sum(gases) / len(gases)) if gases else None
                         avg_flame_raw = sum(flame_raws) / len(flame_raws)
                         # Convert dB from the averaged raw value, not by averaging
                         # individual dB values (log-scale averaging would skew results).
                         avg_sound_db = raw_to_db(avg_sound_raw)
 
-                        alerts = check_alerts(avg_temp, avg_humidity, avg_sound_db, flame_detected_in_window)
+                        alerts = check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_gas_raw, flame_detected_in_window)
 
                         item = {
                             "device_id": DEVICE_ID,
@@ -236,6 +255,7 @@ def main():
                             "sound_raw": round(avg_sound_raw, 1),
                             "sound_db": avg_sound_db,
                             "light_raw": round(avg_light_raw, 1),
+                            "gas_raw": round(avg_gas_raw, 1) if avg_gas_raw is not None else None,
                             "flame_raw": round(avg_flame_raw, 1),
                             "flame_detected": flame_detected_in_window,
                             "alerts": alerts,  # empty list if all clear
@@ -262,7 +282,7 @@ def main():
                     # switch to idle phase
                     is_collecting = False
                     phase_start = time.time()
-                    temps, humidities, sounds, lights, flame_raws = [], [], [], [], []
+                    temps, humidities, sounds, lights, gases, flame_raws = [], [], [], [], [], []
                     flame_detected_in_window = False
                     rejected_count = 0
                     print(f"Going idle for {IDLE_SECONDS}s...")

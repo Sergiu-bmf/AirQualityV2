@@ -19,12 +19,10 @@ const float HUMIDITY_HIGH = 70.0;   // % - above this counts as "humid"
 const int SOUND_HIGH = 550;         // raw ADC ~ corresponds to ~80dB per your calibration
 
 // ---- Flame sensor threshold ----
-// This is a PLACEHOLDER - you need to calibrate it yourself:
-// 1. Run the flame_sensor_test.ino sketch with the sensor wired as-is.
-// 2. Note the resting value (no flame) and the value with a flame nearby.
-// 3. Set FLAME_THRESHOLD roughly halfway between them, on whichever side
-//    means "flame present" for your specific sensor's wiring orientation.
-const int FLAME_THRESHOLD = 500;
+// Calibrated using measured values: resting ~3, flame (close range) ~700.
+// Set below the midpoint to stay sensitive to flames that aren't right
+// next to the sensor, while staying safely above the resting noise floor.
+const int FLAME_THRESHOLD = 100;
 
 void setup() {
   Serial.begin(9600);
@@ -66,7 +64,9 @@ void loop() {
   setStatusLED(bad, warn);
 
   if (bad) {
-    tone(BUZZER_PIN, 1000, 300);  // brief alert tone, non-blocking
+    tone(BUZZER_PIN, 1000);  // no duration = plays continuously until noTone() is called
+  } else {
+    noTone(BUZZER_PIN);
   }
 
   Serial.print("Humidity: ");
