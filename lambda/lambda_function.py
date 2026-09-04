@@ -9,7 +9,7 @@ dynamodb = boto3.resource("dynamodb")
 TABLE_NAME = os.environ.get("TABLE_NAME", "SensorReadings")
 table = dynamodb.Table(TABLE_NAME)
 
-# Simple shared-secret check — not real auth, just keeps random internet
+# Simple shared-secret check , not real auth, just keeps random internet
 # traffic from hitting your function URL. Set this as an env var too.
 SHARED_SECRET = os.environ.get("SHARED_SECRET", "")
 
@@ -92,7 +92,7 @@ def get_latest(device_id):
 
 
 """ Safety valve on the pagination loop below. At one window every 4 minutes this is
-about 8 days of history — more than the widest range the app offers. """
+about 8 days of history , more than the widest range the app offers. """
 MAX_HISTORY_ITEMS = 3000
 
 
@@ -117,7 +117,7 @@ def get_history(device_id, params):
 
     # A single query() page caps at 1MB. Ranges of a few days exceed that, and because
     # results come back ascending by timestamp, an unpaginated read would silently drop
-    # the *newest* rows — the chart would look fine while missing the last few hours.
+    # the *newest* rows , the chart would look fine while missing the last few hours.
     items = []
     truncated = False
     while True:
@@ -171,7 +171,7 @@ def get_prefs(device_id):
 def put_prefs(device_id, event):
     """Replace the notification settings for a device.
 
-    Subscribing an email to SNS only *starts* the process — AWS emails a confirmation
+    Subscribing an email to SNS only *starts* the process , AWS emails a confirmation
     link that must be clicked before anything is delivered, so the stored status stays
     "pending" until then. That is surfaced to the app rather than hidden, because an
     unconfirmed subscription looks identical to a working one right up until the fire.
@@ -223,7 +223,7 @@ def put_prefs(device_id, event):
             except Exception as e:                       # noqa: BLE001
                 return response(502, {"error": f"could not subscribe address: {e}"})
     elif subscription_arn and subscription_arn != "pending confirmation":
-        # Email switched off — actually stop the mail rather than just forgetting locally.
+        # Email switched off , actually stop the mail rather than just forgetting locally.
         try:
             boto3.client("sns").unsubscribe(SubscriptionArn=subscription_arn)
         except Exception:                                # noqa: BLE001

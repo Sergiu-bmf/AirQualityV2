@@ -22,7 +22,7 @@ data class NotificationUiState(
     val savedMessage: String? = null,
     /**
       * The prompt asking for an address. Shown on every launch until an email is actually
-      * set — declining silences it for the session, not for good, so an unconfigured fire
+      * set , declining silences it for the session, not for good, so an unconfigured fire
       * alarm keeps announcing itself rather than being quietly forgotten.
       */
     val showOnboarding: Boolean = false,
@@ -78,7 +78,7 @@ class NotificationViewModel(
     /**
      * Decide whether to ask for an address, on every launch.
      *
-     * The condition is simply "no email is set" — not "never been asked". An address that
+     * The condition is simply "no email is set" , not "never been asked". An address that
      * is stored but still pending confirmation counts as set; the Alerts sheet is where
      * that state is explained, and re-asking for an address already given would be noise.
      *
@@ -103,7 +103,7 @@ class NotificationViewModel(
     }
 
     /**
-     * "No thanks": closes the prompt for this session only — it returns next launch until
+     * "No thanks": closes the prompt for this session only , it returns next launch until
      * an address is set. Still recorded server-side as an empty channel list so the
      * pipeline reads it as a deliberate silence rather than an unconfigured device.
      */
@@ -133,13 +133,13 @@ class NotificationViewModel(
                         email = state.email.ifBlank { null },
                     ),
                 )
-                // Re-seed from what the server actually stored, not from what was typed —
+                // Re-seed from what the server actually stored, not from what was typed ,
                 // email_status in particular is only known server-side.
                 apply(stored, loading = false)
                 _uiState.update {
                     it.copy(
                         savedMessage = if (stored.emailStatus == "pending") {
-                            "Saved. Check your inbox and click the AWS confirmation link — " +
+                            "Saved. Check your inbox and click the AWS confirmation link , " +
                                 "no email is delivered until you do."
                         } else {
                             "Saved."
@@ -175,7 +175,7 @@ class NotificationViewModel(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
-                // Stay open with the reason showing — the address they typed is still there.
+                // Stay open with the reason showing , the address they typed is still there.
                 _uiState.update {
                     it.copy(isSaving = false, errorMessage = error.message ?: "Couldn't save settings.")
                 }

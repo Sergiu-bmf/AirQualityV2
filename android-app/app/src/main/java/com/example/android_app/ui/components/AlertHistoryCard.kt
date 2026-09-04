@@ -112,7 +112,7 @@ private fun AlertRow(reading: SensorReading, nowSeconds: Long, multiDayAxis: Boo
             )
             // A red window always carries the flame alert string from the pipeline, but
             // fall back rather than render an empty row for a window that has no alert
-            // strings — either a future status arriving without one, or a row written
+            // strings , either a future status arriving without one, or a row written
             // before the pipeline stored a status at all.
             val lines = reading.alerts.ifEmpty {
                 listOf(

@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
  *
  * "No thanks" closes it for the session and is saved server-side as an empty channel
  * list, so the pipeline reads it as a deliberate silence rather than an unconfigured
- * device — but it returns next launch. That is intentional: an unconfigured fire alarm
+ * device , but it returns next launch. That is intentional: an unconfigured fire alarm
  * should keep saying so rather than being permanently dismissed by one tap.
  *
  * No Android notification permission is involved: the alert is an email, so there is no
@@ -40,7 +40,7 @@ fun NotificationOnboardingDialog(
     val looksValid = email.matches(EMAIL_SHAPE)
 
     AlertDialog(
-        // Not dismissable by tapping outside — "No thanks" is the way past it, so that
+        // Not dismissable by tapping outside , "No thanks" is the way past it, so that
         // declining is a recorded answer rather than an accidental tap on the scrim.
         onDismissRequest = {},
         title = { Text("Get alerted about fire?") },
@@ -48,7 +48,7 @@ fun NotificationOnboardingDialog(
             Column {
                 Text(
                     "If the flame sensor trips, this can email you. Nothing else notifies " +
-                        "you — temperature and air quality stay in the app.",
+                        "you , temperature and air quality stay in the app.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedTextField(
@@ -63,7 +63,7 @@ fun NotificationOnboardingDialog(
                         .padding(top = 16.dp),
                 )
                 Text(
-                    "AWS will email you a confirmation link first — alerts only start once " +
+                    "AWS will email you a confirmation link first , alerts only start once " +
                         "you click it. Check your spam folder.",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

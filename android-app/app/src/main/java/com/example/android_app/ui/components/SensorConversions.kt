@@ -21,7 +21,7 @@ object SensorConversions {
     // ---------- Light: raw ADC -> lux (approximate) ----------
 
     /**
-     * The fixed leg of the divider, per the wiring in PROJECT_DOCUMENTATION.md:
+     * The fixed leg of the divider, per the wiring documented in docs/hardware.md:
      * `5V -> LDR -> A1 -> 10k -> GND`, so a higher raw value means more light.
      */
     private const val LDR_DIVIDER_OHMS = 10_000.0
@@ -29,7 +29,7 @@ object SensorConversions {
     /**
      * Assumed LDR resistance at 10 lux. **This is the scale knob.** The kit's photoresistor
      * is a bare unmarked component, so this is the nominal figure for a GL5528, the most
-     * common part in kits of this kind — not a measurement. If a phone lux meter says the
+     * common part in kits of this kind , not a measurement. If a phone lux meter says the
      * room is 10x brighter than the app claims, this constant is what to correct: lux
      * scales as `(R10 / R)^(1/gamma)`, so raising R10 raises every reading.
      */
@@ -66,7 +66,7 @@ object SensorConversions {
 
     /**
      * The raw value this specific MQ-135 settles at in clean air once the heater has
-     * stabilised. **Not measured yet — until it is set, [gasRatio] returns null and the
+     * stabilised. **Not measured yet , until it is set, [gasRatio] returns null and the
      * app keeps showing raw ADC.** To find it: run the pipeline in a well-ventilated room
      * for a few windows and read `gas_raw` off the stored item it prints.
      *
@@ -77,7 +77,7 @@ object SensorConversions {
 
     /**
      * Sensor resistance relative to its clean-air resistance: 1.0 is the baseline, and
-     * lower means more of whatever the MQ-135 responds to (CO2, ammonia, benzene, smoke —
+     * lower means more of whatever the MQ-135 responds to (CO2, ammonia, benzene, smoke ,
      * it cannot tell them apart, which is why this is a ratio and not a ppm figure).
      *
      * Returns null when the baseline is unset or the reading is pinned at either rail.
@@ -95,7 +95,7 @@ object SensorConversions {
     // ---------- Flame: raw ADC -> % of the detection threshold ----------
 
     /**
-     * Mirrors `FLAME_THRESHOLD` in `arduino/sensor_data.ino` — the level at which the
+     * Mirrors `FLAME_THRESHOLD` in `arduino/sensor_data.ino` , the level at which the
      * sketch lights the red LED and sounds the buzzer. Hand-copied, like every other
      * threshold in this project; if it changes in the sketch it must change here.
      */
@@ -104,7 +104,7 @@ object SensorConversions {
     /**
      * How close this reading sits to tripping the on-device alarm: 100% is the threshold
      * itself. The sensor measures IR intensity with no physical unit attached, so a
-     * percentage of the alarm point is the only honest way to make it readable — it
+     * percentage of the alarm point is the only honest way to make it readable , it
      * answers "how much headroom is left", which is what the chart is for.
      *
      * Values above 100% are real and expected: a flame held close reads ~700 raw, ~467%.

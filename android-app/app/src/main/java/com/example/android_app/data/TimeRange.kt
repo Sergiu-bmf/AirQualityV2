@@ -12,14 +12,14 @@ object PipelineTiming {
     /**
      * Spacing above which we treat the data as genuinely missing rather than jittery,
      * so charts break the line instead of drawing a straight segment across an outage.
-     * Deliberately loose (2.5 windows) — one late row is normal, three missed ones is not.
+     * Deliberately loose (2.5 windows) , one late row is normal, three missed ones is not.
      */
     const val GAP_SECONDS = 600L
 }
 
 /**
  * Selectable history windows. At one row every [PipelineTiming.WINDOW_SECONDS] a day is
- * ~360 rows and a week is ~2500 — still one query each, but long ranges are downsampled
+ * ~360 rows and a week is ~2500 , still one query each, but long ranges are downsampled
  * before they are drawn (see `ChartMath.downsample`).
  */
 enum class TimeRange(val label: String, val seconds: Long) {

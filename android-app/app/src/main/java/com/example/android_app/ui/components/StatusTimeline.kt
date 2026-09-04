@@ -30,7 +30,7 @@ import com.example.android_app.data.trafficLight
 /**
  * A one-strip overview of the whole range: every stored window painted at its position
  * in time, coloured by the `status` the pipeline computed. Blank stretches are windows
- * that were never written — a device outage — which is information the line charts can
+ * that were never written , a device outage , which is information the line charts can
  * only imply.
  *
  * This reads the precomputed `status` rather than re-deriving it from `alerts`, matching

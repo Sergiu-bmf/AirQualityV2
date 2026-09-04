@@ -110,8 +110,8 @@ class HistoryDiagnosticsTest {
 
     @Test
     fun `a row written before the pipeline stored a status reads as unknown`() {
-        // Rows from that era exist with real alerts on them — one in the live table
-        // carries a flame detection — so defaulting a missing status to green would
+        // Rows from that era exist with real alerts on them , one in the live table
+        // carries a flame detection , so defaulting a missing status to green would
         // paint a green light over "Flame detected during this window!".
         assertEquals(TrafficLight.UNKNOWN, reading(1_000L, status = null).trafficLight)
     }

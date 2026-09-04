@@ -6,7 +6,7 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 /**
- * The Lambda Function URL's two routes. Auth is a shared-secret `key` query param —
+ * The Lambda Function URL's two routes. Auth is a shared-secret `key` query param ,
  * see the note in CLAUDE.md: this is not real authentication.
  */
 interface SensorApi {
@@ -27,7 +27,7 @@ interface SensorApi {
         @Query("end") end: Long,
     ): HistoryResponse
 
-    /** Current notification settings. Never 404s — unset settings are an empty result. */
+    /** Current notification settings. Never 404s , unset settings are an empty result. */
     @GET("prefs")
     suspend fun prefs(
         @Query("key") key: String,

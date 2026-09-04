@@ -137,7 +137,7 @@ fun StatusScreen(viewModel: StatusViewModel = viewModel()) {
 
                 if (state.isTruncated) {
                     item {
-                        InfoCard("The Lambda capped this query — the oldest part of the ${state.range.label} range isn't shown.")
+                        InfoCard("The Lambda capped this query , the oldest part of the ${state.range.label} range isn't shown.")
                     }
                 }
 
@@ -183,7 +183,7 @@ fun StatusScreen(viewModel: StatusViewModel = viewModel()) {
 
                 if (state.history.isEmpty() && state.latest != null && state.errorMessage == null && !state.isLoading) {
                     item {
-                        InfoCard("Nothing recorded in the last ${state.range.label} — try a wider range.")
+                        InfoCard("Nothing recorded in the last ${state.range.label} , try a wider range.")
                     }
                 }
 

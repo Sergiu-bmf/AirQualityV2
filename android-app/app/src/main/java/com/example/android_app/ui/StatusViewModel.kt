@@ -22,7 +22,7 @@ data class StatusUiState(
     val history: List<SensorReading> = emptyList(),
     val range: TimeRange = TimeRange.LAST_6_HOURS,
     val diagnostics: HistoryDiagnostics? = null,
-    /** The Lambda capped the result set — the oldest part of the range is missing. */
+    /** The Lambda capped the result set , the oldest part of the range is missing. */
     val isTruncated: Boolean = false,
     val errorMessage: String? = null,
     val lastRefreshedAt: Long? = null,
@@ -89,7 +89,7 @@ class StatusViewModel(
                     )
                 }
             } catch (cancellation: CancellationException) {
-                // A newer refresh superseded this one — leave the spinner to that job.
+                // A newer refresh superseded this one , leave the spinner to that job.
                 throw cancellation
             } catch (error: Exception) {
                 _uiState.update {

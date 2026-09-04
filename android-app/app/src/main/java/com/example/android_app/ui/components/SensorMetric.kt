@@ -10,7 +10,7 @@ import java.util.Locale
  * chart. The status tiles, the charts and the detail sheet all iterate this, so adding a
  * sensor to the sketch and the pipeline means adding exactly one entry here.
  *
- * `sound_raw` is deliberately absent — it is a monotonic transform of [SOUND] via the
+ * `sound_raw` is deliberately absent , it is a monotonic transform of [SOUND] via the
  * pipeline's `raw_to_db()`, so charting both would draw the same curve twice.
  */
 enum class SensorMetric(
@@ -66,7 +66,7 @@ enum class SensorMetric(
     // The only metric whose unit depends on calibration state. Until the MQ-135's
     // clean-air baseline is measured (SensorConversions.GAS_CLEAN_AIR_RAW), a ratio
     // cannot be computed, so this stays on raw ADC rather than showing an empty chart.
-    // Setting that one constant flips this entry — unit, format, reference line and all —
+    // Setting that one constant flips this entry , unit, format, reference line and all ,
     // with no further edits here.
     GAS(
         label = "Gas",
@@ -80,7 +80,7 @@ enum class SensorMetric(
         },
         thresholdLabel = if (SensorConversions.GAS_CLEAN_AIR_RAW == null) "alert" else "clean air",
         sensor = if (SensorConversions.GAS_CLEAN_AIR_RAW == null) {
-            "MQ-135 · raw ADC — set GAS_CLEAN_AIR_RAW to read this as Rs/R0"
+            "MQ-135 · raw ADC , set GAS_CLEAN_AIR_RAW to read this as Rs/R0"
         } else {
             "MQ-135 · Rs/R0 vs clean air; 1.0 is baseline, lower means more contaminant"
         },
@@ -109,5 +109,5 @@ enum class SensorMetric(
 
     /** Formats a value with its unit, or an em dash when the sensor reported nothing. */
     fun renderWithUnit(value: Float?): String =
-        if (value == null) "—" else "${render(value)} $unit"
+        if (value == null) "," else "${render(value)} $unit"
 }

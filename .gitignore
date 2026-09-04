@@ -423,9 +423,16 @@ android-app/build/
 android-app/*/build/
 android-app/.idea/
 
-# JetBrains IDE settings — per-developer, and the repo root has its own .idea/ alongside
+# JetBrains IDE settings , per-developer, and the repo root has its own .idea/ alongside
 # android-app/.idea/. The rule above only covered the latter.
 .idea/
 
-# Claude Code project instructions — kept local rather than shared.
+# Claude Code project instructions , kept local rather than shared.
 CLAUDE.md
+
+# Zensical documentation build output
+site/
+.cache/
+
+# Local virtualenv for the docs toolchain (zensical)
+.venv/
