@@ -1,5 +1,9 @@
 # AirQualityV2
 
+[![Documentation](https://img.shields.io/badge/documentation-online-E0662B?style=flat-square)](https://sergiu-bmf.github.io/AirQualityV2/)
+[![Docs build](https://img.shields.io/github/actions/workflow/status/Sergiu-bmf/AirQualityV2/docs.yml?branch=master&label=docs%20build&style=flat-square)](https://github.com/Sergiu-bmf/AirQualityV2/actions/workflows/docs.yml)
+[![Platform](https://img.shields.io/badge/platform-Arduino%20%C2%B7%20AWS%20%C2%B7%20Android-555?style=flat-square)](#architecture)
+
 A self-built environmental monitor. An Arduino Uno reads temperature, humidity, sound,
 light, gas and flame; a Python pipeline on a laptop averages those readings and writes
 them to DynamoDB; a Lambda serves them over HTTP; and a native Android app shows the
