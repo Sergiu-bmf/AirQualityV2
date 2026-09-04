@@ -31,8 +31,9 @@ GAS_RAW_MIN, GAS_RAW_MAX = 0, 1023      # 10-bit ADC range for the MQ-135 gas se
 # These are separate from the Arduino's own instant per-reading thresholds —
 # this set looks at trends over the averaging window rather than single spikes.
 TEMP_ALERT_HIGH = 28.0
-HUMIDITY_ALERT_HIGH = 70.0
+HUMIDITY_ALERT_HIGH = 50.0
 SOUND_DB_ALERT_HIGH = 75.0
+LIGHT_ALERT_HIGH = 800  # matches Arduino's LIGHT_HIGH — relative to your LDR/resistor pairing
 FLAME_ALERT_ANY = True  # if True, any flame detection in the window triggers an alert
 # PLACEHOLDER — set this once you've measured your MQ-135's actual clean-air
 # baseline after its warm-up period. 400 is just a starting guess.
@@ -116,7 +117,7 @@ def is_valid_reading(temperature, humidity, sound_raw, light_raw, gas_raw, flame
     return True, None
 
 
-def check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_gas_raw, flame_detected_in_window):
+def check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_light_raw, avg_gas_raw, flame_detected_in_window):
     """Returns a list of human-readable alert messages for any threshold
     crossed by this window's averaged values. Empty list = all clear."""
     alerts = []
@@ -124,6 +125,8 @@ def check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_gas_raw, flame_detect
         alerts.append(f"Temperature high: {avg_temp:.1f}C (threshold {TEMP_ALERT_HIGH}C)")
     if avg_humidity > HUMIDITY_ALERT_HIGH:
         alerts.append(f"Humidity high: {avg_humidity:.1f}% (threshold {HUMIDITY_ALERT_HIGH}%)")
+    if avg_light_raw > LIGHT_ALERT_HIGH:
+        alerts.append(f"Light level high: {avg_light_raw:.1f} raw (threshold {LIGHT_ALERT_HIGH})")
     if avg_sound_db is not None and avg_sound_db > SOUND_DB_ALERT_HIGH:
         alerts.append(f"Sound level high: {avg_sound_db:.1f}dB (threshold {SOUND_DB_ALERT_HIGH}dB)")
     if avg_gas_raw is not None and avg_gas_raw > GAS_ALERT_HIGH:
@@ -243,7 +246,16 @@ def main():
                         # individual dB values (log-scale averaging would skew results).
                         avg_sound_db = raw_to_db(avg_sound_raw)
 
-                        alerts = check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_gas_raw, flame_detected_in_window)
+                        alerts = check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_light_raw, avg_gas_raw, flame_detected_in_window)
+
+                        # Explicit traffic light status for the app to read directly,
+                        # rather than re-deriving it from the alerts list each time.
+                        if flame_detected_in_window:
+                            status = "red"
+                        elif alerts:
+                            status = "yellow"
+                        else:
+                            status = "green"
 
                         item = {
                             "device_id": DEVICE_ID,
@@ -259,6 +271,7 @@ def main():
                             "flame_raw": round(avg_flame_raw, 1),
                             "flame_detected": flame_detected_in_window,
                             "alerts": alerts,  # empty list if all clear
+                            "status": status,  # "green" / "yellow" / "red" — for the app's traffic light
                             "sample_count": len(temps),
                             "rejected_count": rejected_count,
                         }

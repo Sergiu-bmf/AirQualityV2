@@ -61,6 +61,11 @@ def get_latest(device_id):
     return response(200, items[0])
 
 
+""" Safety valve on the pagination loop below. At one window every 4 minutes this is
+about 8 days of history — more than the widest range the app offers. """
+MAX_HISTORY_ITEMS = 3000
+
+
 def get_history(device_id, params):
     start = params.get("start")
     end = params.get("end")
@@ -74,10 +79,32 @@ def get_history(device_id, params):
     except ValueError:
         return response(400, {"error": "start and end must be integers (unix timestamps)"})
 
-    result = table.query(
-        KeyConditionExpression="device_id = :d AND #ts BETWEEN :s AND :e",
-        ExpressionAttributeNames={"#ts": "timestamp"},
-        ExpressionAttributeValues={":d": device_id, ":s": start, ":e": end},
-    )
-    return response(200, {"items": result.get("Items", [])})
+    query = {
+        "KeyConditionExpression": "device_id = :d AND #ts BETWEEN :s AND :e",
+        "ExpressionAttributeNames": {"#ts": "timestamp"},
+        "ExpressionAttributeValues": {":d": device_id, ":s": start, ":e": end},
+    }
+
+    # A single query() page caps at 1MB. Ranges of a few days exceed that, and because
+    # results come back ascending by timestamp, an unpaginated read would silently drop
+    # the *newest* rows — the chart would look fine while missing the last few hours.
+    items = []
+    truncated = False
+    while True:
+        result = table.query(**query)
+        items.extend(result.get("Items", []))
+
+        last_key = result.get("LastEvaluatedKey")
+        if not last_key:
+            break
+        if len(items) >= MAX_HISTORY_ITEMS:
+            truncated = True
+            break
+        query["ExclusiveStartKey"] = last_key
+
+    body = {"items": items[:MAX_HISTORY_ITEMS]}
+    if truncated:
+        # Say so rather than pretending the window was quiet after this point.
+        body["truncated"] = True
+    return response(200, body)
 
