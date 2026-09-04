@@ -55,33 +55,47 @@ enum class SensorMetric(
     ),
     LIGHT(
         label = "Light",
-        unit = "raw",
-        valueFormat = "%.0f",
+        unit = "lux",
+        valueFormat = "%.1f",
         color = Color(0xFFF9A825),
-        threshold = AlertThresholds.LIGHT_RAW,
+        threshold = AlertThresholds.LIGHT_LUX,
         thresholdLabel = "alert",
-        sensor = "LDR · 0–1023 ADC, relative to your resistor pairing",
-        select = { it.lightRaw },
+        sensor = "LDR · lux approximated from the 10k divider; scale is assumed, trend is real",
+        select = { SensorConversions.lux(it.lightRaw) },
     ),
+    // The only metric whose unit depends on calibration state. Until the MQ-135's
+    // clean-air baseline is measured (SensorConversions.GAS_CLEAN_AIR_RAW), a ratio
+    // cannot be computed, so this stays on raw ADC rather than showing an empty chart.
+    // Setting that one constant flips this entry — unit, format, reference line and all —
+    // with no further edits here.
     GAS(
         label = "Gas",
-        unit = "raw",
-        valueFormat = "%.0f",
+        unit = if (SensorConversions.GAS_CLEAN_AIR_RAW == null) "raw" else "Rs/R0",
+        valueFormat = if (SensorConversions.GAS_CLEAN_AIR_RAW == null) "%.0f" else "%.2f",
         color = Color(0xFF00897B),
-        threshold = AlertThresholds.GAS_RAW,
-        thresholdLabel = "alert",
-        sensor = "MQ-135 · 0–1023 ADC, threshold still a placeholder",
-        select = { it.gasRaw },
+        threshold = if (SensorConversions.GAS_CLEAN_AIR_RAW == null) {
+            AlertThresholds.GAS_RAW
+        } else {
+            AlertThresholds.GAS_CLEAN_AIR_RATIO
+        },
+        thresholdLabel = if (SensorConversions.GAS_CLEAN_AIR_RAW == null) "alert" else "clean air",
+        sensor = if (SensorConversions.GAS_CLEAN_AIR_RAW == null) {
+            "MQ-135 · raw ADC — set GAS_CLEAN_AIR_RAW to read this as Rs/R0"
+        } else {
+            "MQ-135 · Rs/R0 vs clean air; 1.0 is baseline, lower means more contaminant"
+        },
+        // Falls back to raw whenever the ratio is unavailable, so the chart never empties.
+        select = { reading -> reading.gasRaw?.let { SensorConversions.gasRatio(it) ?: it } },
     ),
     FLAME(
         label = "Flame",
-        unit = "raw",
+        unit = "%",
         valueFormat = "%.0f",
         color = Color(0xFFC62828),
-        threshold = AlertThresholds.FLAME_RAW_DETECT,
+        threshold = AlertThresholds.FLAME_DETECT_PERCENT,
         thresholdLabel = "detect",
-        sensor = "IR flame sensor · ~3 at rest, ~700 at close range",
-        select = { it.flameRaw },
+        sensor = "IR flame sensor · % of the alarm threshold; ~2% at rest, ~470% at close range",
+        select = { SensorConversions.flamePercent(it.flameRaw) },
     );
 
     /** The plottable samples for this metric, skipping rows where it wasn't recorded. */

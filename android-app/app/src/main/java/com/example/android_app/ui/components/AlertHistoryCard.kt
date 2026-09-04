@@ -111,9 +111,16 @@ private fun AlertRow(reading: SensorReading, nowSeconds: Long, multiDayAxis: Boo
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             // A red window always carries the flame alert string from the pipeline, but
-            // fall back rather than render an empty row if a future status arrives
-            // without one.
-            val lines = reading.alerts.ifEmpty { listOf("Status reported as \"${reading.status}\"") }
+            // fall back rather than render an empty row for a window that has no alert
+            // strings — either a future status arriving without one, or a row written
+            // before the pipeline stored a status at all.
+            val lines = reading.alerts.ifEmpty {
+                listOf(
+                    reading.status
+                        ?.let { "Status reported as \"$it\"" }
+                        ?: "No status stored for this window.",
+                )
+            }
             lines.forEach { alert ->
                 Text(
                     text = alert,

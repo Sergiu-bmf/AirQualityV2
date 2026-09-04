@@ -10,6 +10,9 @@ import kotlinx.serialization.Serializable
  * Nullability mirrors the pipeline exactly:
  *  - [gasRaw] is null when the Arduino sketch doesn't print a `Gas:` field.
  *  - [soundDb] is null when the averaged raw value was <= 0 (`raw_to_db` returns None).
+ *  - [status] is null on rows written before the pipeline computed one at all. It must
+ *    not default to `"green"`: rows from that era exist with a flame alert in [alerts],
+ *    and defaulting would paint them healthy.
  * Everything else is always written, but the trailing fields are given defaults so an
  * older row missing them still deserializes instead of crashing the screen.
  */
@@ -28,7 +31,7 @@ data class SensorReading(
     @SerialName("flame_raw") val flameRaw: Float = 0f,
     @SerialName("flame_detected") val flameDetected: Boolean = false,
     val alerts: List<String> = emptyList(),
-    val status: String = "green",
+    val status: String? = null,
     @SerialName("sample_count") val sampleCount: Int = 0,
     @SerialName("rejected_count") val rejectedCount: Int = 0,
 )
@@ -48,13 +51,14 @@ data class HistoryResponse(
 
 /**
  * The pipeline precomputes the traffic light into `status`, so the app never re-derives
- * it from [SensorReading.alerts]. Unknown values fall back to [UNKNOWN] rather than
- * silently reading as "green", so a schema change shows up instead of looking healthy.
+ * it from [SensorReading.alerts]. Both an unrecognised value and a missing one fall back
+ * to [UNKNOWN] rather than silently reading as "green", so neither a schema change nor a
+ * pre-`status` row looks healthy.
  */
 enum class TrafficLight { GREEN, YELLOW, RED, UNKNOWN }
 
 val SensorReading.trafficLight: TrafficLight
-    get() = when (status.lowercase()) {
+    get() = when (status?.lowercase()) {
         "green" -> TrafficLight.GREEN
         "yellow" -> TrafficLight.YELLOW
         "red" -> TrafficLight.RED

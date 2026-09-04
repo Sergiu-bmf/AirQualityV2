@@ -422,3 +422,10 @@ android-app/local.properties
 android-app/build/
 android-app/*/build/
 android-app/.idea/
+
+# JetBrains IDE settings — per-developer, and the repo root has its own .idea/ alongside
+# android-app/.idea/. The rule above only covered the latter.
+.idea/
+
+# Claude Code project instructions — kept local rather than shared.
+CLAUDE.md

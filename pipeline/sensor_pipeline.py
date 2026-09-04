@@ -1,21 +1,74 @@
+import os
 import serial
+from serial.tools import list_ports
 import time
 import math
 import re
 import boto3
+import requests
 from botocore.exceptions import ClientError, EndpointConnectionError
 from decimal import Decimal
 
 # ---------- CONFIG ----------
-SERIAL_PORT = "/dev/ttyACM0"   # check with `ls /dev/tty*` while Arduino is plugged in
-                                 # (often /dev/ttyUSB0 or /dev/ttyACM0 on Linux)
+# Leave as None to find the board automatically by its USB identity. Set it to a path
+# like "/dev/ttyACM0" only to force a specific port (e.g. two boards plugged in at once).
+#
+# Auto-detection exists because the number on the end of /dev/ttyACM* is not stable: the
+# kernel hands out the next free one, so replugging the board — or a reset while the old
+# node is still held — moves it from ttyACM0 to ttyACM1 and a hard-coded path then fails
+# with "No such file or directory" even though the Arduino is sitting right there.
+SERIAL_PORT = None
+
+# USB vendor IDs that mean "this is probably the board": Arduino SA and Arduino.org, plus
+# the USB-serial chips used on clones (CH340, FTDI, CP210x, SparkFun, Adafruit).
+KNOWN_BOARD_VIDS = {0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4, 0x1B4F, 0x239A}
 BAUD_RATE = 9600
+# readline() returns whatever it has so far when this expires, so a value at or below the
+# Arduino's ~2s loop period clips lines in half. Kept comfortably above it; the cost is
+# that a silent Arduino delays the collect/idle phase switch by up to this many seconds.
+SERIAL_TIMEOUT_SECONDS = 5
 DEVICE_ID = "arduino-01"
 AWS_REGION = "eu-central-1"
 TABLE_NAME = "SensorReadings"
 
 AVERAGING_WINDOW_SECONDS = 60   # how long to actively collect readings before averaging
 IDLE_SECONDS = 180              # how long to pause (drain-only, no storage) between windows
+
+# ---------- NOTIFICATIONS ----------
+# A flame is the ONLY condition that reaches a phone. Everything else stays in the app on
+# purpose: a notification you learn to swipe away is worse than no notification at all.
+#
+# Email is the only channel. notify() still fans out over a list precisely so a second
+# one (an in-app push via FCM, say) can be added without touching the detection logic.
+
+# The notification settings come from the environment rather than being written
+# here, because LAMBDA_KEY is the Lambda's shared secret and this file is in git. Set them
+# in your shell (or a .env you don't commit) before starting the pipeline:
+#
+#   export AIRQ_LAMBDA_URL="https://<id>.lambda-url.eu-central-1.on.aws"
+#   export AIRQ_LAMBDA_KEY="<the Lambda's SHARED_SECRET>"
+#   export AIRQ_SNS_TOPIC_ARN="arn:aws:sns:eu-central-1:<account>:AirQualityAlerts"
+#
+# All optional. Unset means that piece is switched off and the pipeline runs exactly as
+# it did before notifications existed.
+
+# Where the app's notification preferences are read from. Unset ignores the app entirely
+# and falls back to the local channel settings below.
+LAMBDA_BASE_URL = os.environ.get("AIRQ_LAMBDA_URL") or None
+LAMBDA_KEY = os.environ.get("AIRQ_LAMBDA_KEY") or None
+PREFS_REFRESH_SECONDS = 240  # re-read once per collect/idle cycle
+
+# SNS email. The address must confirm the subscription by clicking the link AWS emails it
+# before anything is delivered, and the pipeline's IAM user needs sns:Publish.
+SNS_TOPIC_ARN = os.environ.get("AIRQ_SNS_TOPIC_ARN") or None
+
+# Flame readings arrive every ~2s, so a fire that keeps burning would notify on every one
+# of them. Notify on the transition into flame, then at most once per re-notify interval.
+FLAME_RENOTIFY_SECONDS = 1800   # remind every 30 min while it is still detected
+# Declare it over only after this long with no detection, so a flickering sensor reading
+# 1,0,1,0 produces one alert rather than an alternating stream of alerts and all-clears.
+FLAME_CLEAR_SECONDS = 60
+
 
 # ---------- VALIDATION RANGES ----------
 # DHT11 datasheet limits + a sane range for the sound sensor's raw ADC value.
@@ -62,15 +115,26 @@ def floats_to_decimal(obj):
     return obj
 
 
-# Matches with or without the "Gas:" field, since the Arduino sketch may not
-# have the gas sensor wired in yet:
+# Matches with or without the "Gas:" field. The gas sensor is installed now, but rows
+# predating it exist and an older sketch may still be flashed:
 # "Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Gas: 250, Flame: 0, FlameRaw: 320"
 # "Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Flame: 0, FlameRaw: 320"
+#
+# Anchored at BOTH ends, with the sketch's literal "," separators rather than ".*?"
+# between fields. That is deliberate and load-bearing: a serial read can return half a
+# line (see SERIAL_TIMEOUT_SECONDS), and with permissive gaps a head glued to the next
+# full line still matched — ".*?" would backtrack past the second "Humidity:" and stitch
+# temperature from one reading to light/gas from the next, producing a plausible blended
+# row that passed validation and got stored. Anchoring alone does not prevent that; the
+# strict separators are what do. Keep both if you edit the line format.
+#
+# "[^,]*" after the temperature absorbs the "°C " suffix, which survives the decode as
+# either "°C" or a bare "C" depending on how the multi-byte degree sign lands.
 LINE_PATTERN = re.compile(
-    r"Humidity:\s*([\d.]+)%.*?Temperature:\s*([\d.]+).*?"
-    r"Sound Level:\s*(\d+).*?Light:\s*(\d+)"
-    r"(?:.*?Gas:\s*(\d+))?.*?"
-    r"Flame:\s*(\d).*?FlameRaw:\s*(\d+)"
+    r"\A\s*Humidity:\s*([\d.]+)%\s+Temperature:\s*([\d.]+)[^,]*,\s*"
+    r"Sound Level:\s*(\d+),\s*Light:\s*(\d+)"
+    r"(?:,\s*Gas:\s*(\d+))?,\s*"
+    r"Flame:\s*(\d),\s*FlameRaw:\s*(\d+)\s*\Z"
 )
 
 
@@ -80,7 +144,7 @@ def parse_line(line):
     (Gas field is optional — will be None if not present in the line, e.g.
     before the gas sensor is physically installed.)
     """
-    match = LINE_PATTERN.search(line)
+    match = LINE_PATTERN.match(line)
     if not match:
         return None
     try:
@@ -136,18 +200,191 @@ def check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_light_raw, avg_gas_ra
     return alerts
 
 
+# None means "never successfully fetched", which is distinct from a fetched-but-empty
+# preference. Unknown falls back to the local constants; explicitly-empty means the user
+# turned notifications off in the app and must NOT be overridden by a stale local value.
+_prefs = None
+_prefs_fetched_at = 0.0
+
+
+def refresh_prefs(force=False):
+    """Pull the app's notification settings. Failure is non-fatal — the last known good
+    settings stay in effect, because dropping to 'no channels' the moment the network
+    blips is exactly when an alert matters most."""
+    global _prefs, _prefs_fetched_at
+    if not LAMBDA_BASE_URL:
+        return
+    now = time.time()
+    if not force and now - _prefs_fetched_at < PREFS_REFRESH_SECONDS:
+        return
+    try:
+        r = requests.get(
+            f"{LAMBDA_BASE_URL.rstrip('/')}/prefs",
+            params={"key": LAMBDA_KEY, "device_id": DEVICE_ID},
+            timeout=5,
+        )
+        r.raise_for_status()
+        fetched = r.json()
+        if fetched != _prefs:
+            print(f"Notification prefs: channels={fetched.get('channels')} "
+                  f"email_status={fetched.get('email_status')}")
+        _prefs = fetched
+        _prefs_fetched_at = now
+    except Exception as e:                      # noqa: BLE001
+        print(f"Could not read notification prefs ({e}); keeping previous settings.")
+
+
+def _prefs_are_authoritative():
+    """True only once someone has actually saved settings from the app.
+
+    An unreachable endpoint (_prefs is None) and an endpoint reporting that nothing has
+    ever been saved (configured=False) both mean "the app has no opinion", and the local
+    settings apply. Only a stored, explicitly-empty preference silences the pipeline.
+    """
+    return _prefs is not None and _prefs.get("configured", False)
+
+
+def email_enabled():
+    if not _prefs_are_authoritative():
+        return bool(SNS_TOPIC_ARN)
+    return "email" in _prefs.get("channels", []) and bool(SNS_TOPIC_ARN)
+
+
+_sns = None
+
+
+def _sns_client():
+    """Lazily built so the pipeline still runs with no SNS configured or reachable."""
+    global _sns
+    if _sns is None:
+        _sns = boto3.client("sns", region_name=AWS_REGION)
+    return _sns
+
+
+def send_sns_email(subject, body):
+    if not email_enabled():
+        return False
+    try:
+        # SNS caps Subject at 100 chars and rejects newlines in it.
+        _sns_client().publish(TopicArn=SNS_TOPIC_ARN, Subject=subject[:100], Message=body)
+        return True
+    except Exception as e:                      # noqa: BLE001 - see notify()
+        print(f"  SNS notification failed: {e}")
+        return False
+
+
+def notify(title, body):
+    """Fan out to every configured channel.
+
+    Deliberately swallows every exception: the pipeline is still recording the event that
+    triggered this, and losing the recording because a notification service was
+    unreachable would be the worse failure. Failures are printed, not raised.
+    """
+    if not email_enabled():
+        print(f"  [no notification channel configured] {title}: {body}")
+        return
+    delivered = [name for name, ok in
+                 (("email", send_sns_email(title, body)),)
+                 if ok]
+    print(f"  Notified via {', '.join(delivered)}." if delivered
+          else "  Notification failed on every configured channel.")
+
+
+# Transition state for the flame alert. Kept in memory only: a pipeline restart during an
+# active fire re-notifies, which is the right way for this to fail.
+_flame_alert = {"active": False, "last_notified": 0.0, "last_detected": 0.0}
+
+
+def check_flame_alert(flame, flame_raw, now):
+    """Evaluate one reading for the instant flame alert.
+
+    Called for every valid reading in BOTH phases, unlike the averaging path. The idle
+    phase used to discard lines without parsing them, so a fire starting just after a
+    window closed went unseen for up to AVERAGING_WINDOW_SECONDS + IDLE_SECONDS — around
+    four minutes. Storage cadence is untouched; only alerting runs continuously.
+    """
+    if flame == 1:
+        _flame_alert["last_detected"] = now
+        first = not _flame_alert["active"]
+        due = now - _flame_alert["last_notified"] >= FLAME_RENOTIFY_SECONDS
+        if first or due:
+            _flame_alert["active"] = True
+            _flame_alert["last_notified"] = now
+            stamp = time.strftime("%H:%M:%S", time.localtime(now))
+            print("!!! FLAME DETECTED — sending notification !!!")
+            notify(
+                "Flame detected" if first else "Flame still detected",
+                f"{DEVICE_ID} reported flame at {stamp} (flame_raw={flame_raw}).",
+            )
+    elif _flame_alert["active"] and now - _flame_alert["last_detected"] >= FLAME_CLEAR_SECONDS:
+        _flame_alert["active"] = False
+        quiet = int(now - _flame_alert["last_detected"])
+        notify("Flame cleared", f"{DEVICE_ID}: no flame for {quiet}s.")
+
+
+def find_serial_port():
+    """Locate the Arduino's serial device, or None if it isn't plugged in.
+
+    Only ports reporting a USB vendor ID are considered, which filters out the ~32
+    legacy /dev/ttyS* nodes Linux always advertises. A port whose VID is a known board
+    vendor wins; failing that, any USB serial device is taken as a best guess.
+    """
+    usb_ports = [p for p in list_ports.comports() if p.vid is not None]
+    if not usb_ports:
+        return None
+
+    known = [p for p in usb_ports if p.vid in KNOWN_BOARD_VIDS]
+    candidates = known or usb_ports
+
+    if len(candidates) > 1:
+        print("Multiple USB serial devices found; using the first. "
+              "Set SERIAL_PORT explicitly to choose:")
+        for p in candidates:
+            print(f"  {p.device} — {p.description}")
+
+    chosen = candidates[0]
+    how = "matched a known board vendor" if known else "only USB serial device present"
+    print(f"Auto-detected {chosen.device} ({chosen.description}) — {how}.")
+    return chosen.device
+
+
 def connect_serial(max_retries=5):
     """Attempt to open the serial connection, retrying with backoff on failure.
     Returns the open connection, or None if all retries are exhausted."""
     for attempt in range(1, max_retries + 1):
+        # Re-resolved every attempt, not once at startup: if the board is replugged
+        # mid-run it usually comes back on a different node, and reconnecting to the
+        # remembered path would fail forever.
+        port = SERIAL_PORT or find_serial_port()
+        if port is None:
+            wait = min(2 ** attempt, 30)
+            print(f"No USB serial device found (attempt {attempt}/{max_retries}). "
+                  f"Is the Arduino plugged in? Retrying in {wait}s...")
+            time.sleep(wait)
+            continue
+
         try:
-            ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2)
+            ser = serial.Serial(port, BAUD_RATE, timeout=SERIAL_TIMEOUT_SECONDS)
             time.sleep(2)  # allow Arduino to reset after serial connection opens
-            print(f"Connected to {SERIAL_PORT}")
+
+            # Opening the port can land in the middle of a line the Arduino was already
+            # printing, so whatever is buffered now may be a headless fragment like
+            # "76, Gas: 462, Flame: 0, FlameRaw: 51". Drop the buffer and then read one
+            # more line to consume any partial that was already in flight, so the first
+            # line the main loop parses is guaranteed to start at "Humidity:".
+            ser.reset_input_buffer()
+            discarded = ser.readline().decode("utf-8", errors="ignore").strip()
+            if discarded and not discarded.startswith("Humidity:"):
+                print(f"Discarded partial line while syncing: {discarded}")
+
+            print(f"Connected to {port}")
             return ser
         except serial.SerialException as e:
             wait = min(2 ** attempt, 30)  # exponential backoff, capped at 30s
-            print(f"Serial connection failed (attempt {attempt}/{max_retries}): {e}")
+            print(f"Serial connection failed on {port} (attempt {attempt}/{max_retries}): {e}")
+            if "Permission denied" in str(e):
+                print("  -> That is a permissions problem, not a wiring one: "
+                      "add yourself to the 'dialout' group and log back in.")
             print(f"Retrying in {wait}s...")
             time.sleep(wait)
     return None
@@ -181,7 +418,7 @@ def write_to_dynamodb(table, item, max_retries=3):
 
 # ---------- MAIN ----------
 def main():
-    print(f"Connecting to Arduino on {SERIAL_PORT}...")
+    print(f"Connecting to Arduino on {SERIAL_PORT or 'auto-detected port'}...")
     ser = connect_serial()
     if ser is None:
         print("Could not connect to Arduino after retries. Exiting.")
@@ -189,6 +426,10 @@ def main():
 
     dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
     table = dynamodb.Table(TABLE_NAME)
+
+    refresh_prefs(force=True)
+    print(f"Notifications — email: {'on' if email_enabled() else 'off'}"
+          f"{'' if LAMBDA_BASE_URL else ' (app prefs not configured; using local settings)'}")
 
     print(f"Listening for sensor data — {AVERAGING_WINDOW_SECONDS}s collecting, "
           f"then {IDLE_SECONDS}s idle, repeating... (Ctrl+C to stop)")
@@ -198,35 +439,70 @@ def main():
     window_start_ts = int(phase_start)  # marks when the current collecting phase began
     temps, humidities, sounds, lights, gases, flame_raws = [], [], [], [], [], []
     flame_detected_in_window = False
+    # A flame seen while NOT collecting. Alerting runs continuously but storage samples
+    # only AVERAGING_WINDOW_SECONDS out of every window+idle cycle, so most brief flames
+    # were emailed and then never written to a row — the app showed nothing while the
+    # inbox said "fire". This carries the detection into the next stored row so the
+    # record corroborates the alert instead of contradicting it.
+    flame_outside_window = False
+    flame_outside_peak_raw = 0
     rejected_count = 0
 
     while True:
         try:
             raw_line = ser.readline().decode("utf-8", errors="ignore")
 
-            if is_collecting and raw_line.strip():
+            # Every line is now parsed in both phases. Only ACCUMULATION is gated on the
+            # collecting phase — the flame check below has to run continuously, or a fire
+            # starting during the 180s idle stretch would go unnoticed until the next
+            # window closed.
+            if raw_line.strip():
                 parsed = parse_line(raw_line)
                 if parsed is None:
-                    print(f"Skipping unparseable line: {raw_line.strip()}")
+                    # Fragments are expected while draining during idle; only worth
+                    # reporting when this line should have counted for something.
+                    if is_collecting:
+                        print(f"Skipping unparseable line: {raw_line.strip()}")
                 else:
                     temperature, humidity, sound_raw, light_raw, gas_raw, flame, flame_raw = parsed
+
+                    # Alerting path: always on, both phases, ~2s latency — and gated ONLY
+                    # on the flame fields being sane, never on is_valid_reading().
+                    #
+                    # This separation is deliberate and safety-critical. A fire drives
+                    # temperature up and humidity down, so the DHT11 can leave its rated
+                    # range precisely when something is burning. Requiring a fully valid
+                    # reading here would let an out-of-range thermometer silence the fire
+                    # alarm at the exact moment it is most needed.
+                    if flame in (0, 1) and FLAME_RAW_MIN <= flame_raw <= FLAME_RAW_MAX:
+                        check_flame_alert(flame, flame_raw, time.time())
+                        # Recorded on the same terms as the alert: gated only on the flame
+                        # fields, never on is_valid_reading(). A fire hot enough to push
+                        # the DHT11 out of range would otherwise send an email and still
+                        # leave the stored window green.
+                        if flame == 1:
+                            if is_collecting:
+                                flame_detected_in_window = True
+                            else:
+                                flame_outside_window = True
+                                flame_outside_peak_raw = max(flame_outside_peak_raw, flame_raw)
+
                     valid, reason = is_valid_reading(
                         temperature, humidity, sound_raw, light_raw, gas_raw, flame, flame_raw
                     )
                     if valid:
-                        temps.append(temperature)
-                        humidities.append(humidity)
-                        sounds.append(sound_raw)
-                        lights.append(light_raw)
-                        if gas_raw is not None:
-                            gases.append(gas_raw)
-                        flame_raws.append(flame_raw)
-                        if flame == 1:
-                            flame_detected_in_window = True
-                    else:
+                        # Storage path: unchanged, collecting phase only.
+                        if is_collecting:
+                            temps.append(temperature)
+                            humidities.append(humidity)
+                            sounds.append(sound_raw)
+                            lights.append(light_raw)
+                            if gas_raw is not None:
+                                gases.append(gas_raw)
+                            flame_raws.append(flame_raw)
+                    elif is_collecting:
                         rejected_count += 1
                         print(f"Rejected reading: {reason}")
-            # else: idle phase — line is read (draining the buffer) but discarded
 
             elapsed = time.time() - phase_start
             phase_length = AVERAGING_WINDOW_SECONDS if is_collecting else IDLE_SECONDS
@@ -246,7 +522,19 @@ def main():
                         # individual dB values (log-scale averaging would skew results).
                         avg_sound_db = raw_to_db(avg_sound_raw)
 
+                        # A flame between windows counts for this row. Kept as a separate
+                        # alert string so the history makes clear it was never sampled —
+                        # flame_raw below is the average of the readings we did take, and
+                        # will look unremarkable next to a red status.
+                        if flame_outside_window:
+                            flame_detected_in_window = True
+
                         alerts = check_alerts(avg_temp, avg_humidity, avg_sound_db, avg_light_raw, avg_gas_raw, flame_detected_in_window)
+                        if flame_outside_window:
+                            alerts.append(
+                                f"Flame detected between sampling windows "
+                                f"(peak raw {flame_outside_peak_raw}, not in the averages)"
+                            )
 
                         # Explicit traffic light status for the app to read directly,
                         # rather than re-deriving it from the alerts list each time.
@@ -297,6 +585,8 @@ def main():
                     phase_start = time.time()
                     temps, humidities, sounds, lights, gases, flame_raws = [], [], [], [], [], []
                     flame_detected_in_window = False
+                    flame_outside_window = False
+                    flame_outside_peak_raw = 0
                     rejected_count = 0
                     print(f"Going idle for {IDLE_SECONDS}s...")
 
@@ -305,6 +595,7 @@ def main():
                     is_collecting = True
                     phase_start = time.time()
                     window_start_ts = int(phase_start)
+                    refresh_prefs()
                     print(f"Collecting again for {AVERAGING_WINDOW_SECONDS}s...")
 
         except KeyboardInterrupt:

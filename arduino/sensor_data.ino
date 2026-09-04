@@ -1,7 +1,4 @@
 #include "DHT.h"
-#include <SPI.h>
-#include <SD.h>
-
 #define DHTPIN 2
 #define DHTTYPE DHT11
 #define SOUND_PIN A0
@@ -15,8 +12,6 @@
 #define SD_CS_PIN 10
 
 DHT dht(DHTPIN, DHTTYPE);
-
-bool sdReady = false;  // tracks whether the SD card initialized successfully
 
 // ---- Thresholds for instant local feedback ----
 // Tune these to your space; these are just starting points.
@@ -48,61 +43,12 @@ void setup() {
   pinMode(LED_YELLOW, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
-
-  if (!SD.begin(SD_CS_PIN)) {
-    Serial.println("SD card init failed — continuing without local logging.");
-    sdReady = false;
-  } else {
-    Serial.println("SD card ready.");
-    sdReady = true;
-
-    // Write a header line once, only if the file doesn't already exist,
-    // so repeated power cycles don't keep duplicating headers.
-    if (!SD.exists("data.csv")) {
-      File dataFile = SD.open("data.csv", FILE_WRITE);
-      if (dataFile) {
-        dataFile.println("millis,humidity,temperature,sound_raw,light_raw,gas_raw,flame,flame_raw");
-        dataFile.close();
-      }
-    }
-  }
 }
 
 void setStatusLED(bool bad, bool warn) {
   digitalWrite(LED_RED, bad ? HIGH : LOW);
   digitalWrite(LED_YELLOW, (!bad && warn) ? HIGH : LOW);
   digitalWrite(LED_GREEN, (!bad && !warn) ? HIGH : LOW);
-}
-
-void logToSD(float h, float t, int soundLevel, int lightLevel, int gasLevel,
-             bool flameDetected, int flameRaw) {
-  if (!sdReady) return;  // skip silently if the card failed to init
-
-  File dataFile = SD.open("data.csv", FILE_WRITE);
-  if (dataFile) {
-    // millis() is time-since-power-on, not real time — there's no RTC yet,
-    // so this is only useful for relative ordering/spacing between rows,
-    // not actual wall-clock timestamps.
-    dataFile.print(millis());
-    dataFile.print(",");
-    dataFile.print(h);
-    dataFile.print(",");
-    dataFile.print(t);
-    dataFile.print(",");
-    dataFile.print(soundLevel);
-    dataFile.print(",");
-    dataFile.print(lightLevel);
-    dataFile.print(",");
-    dataFile.print(gasLevel);
-    dataFile.print(",");
-    dataFile.print(flameDetected ? 1 : 0);
-    dataFile.print(",");
-    dataFile.println(flameRaw);
-    dataFile.close();  // close (flushes to card) after every write — slightly
-                        // slower, but ensures data survives a sudden power loss
-  } else {
-    Serial.println("Failed to open data.csv for writing.");
-  }
 }
 
 void loop() {
@@ -151,6 +97,4 @@ void loop() {
   Serial.print(", FlameRaw: ");
   Serial.print(flameRaw);
   Serial.print("\n");
-
-  logToSD(h, t, soundLevel, lightLevel, gasLevel, flameDetected, flameRaw);
 }

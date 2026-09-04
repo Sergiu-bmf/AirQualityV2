@@ -24,4 +24,21 @@ object AlertThresholds {
      * detection line is the only way to tell whether the sensor is about to false-fire.
      */
     const val FLAME_RAW_DETECT = 150.0f
+
+    // ---------- The same thresholds, in the units the charts actually plot ----------
+    // Derived through SensorConversions rather than written out as numbers, so a change to
+    // a calibration constant moves the reference line with the data instead of leaving a
+    // stale line the series quietly drifts away from.
+
+    /** [LIGHT_RAW] expressed in lux (~84 with the current LDR assumptions). */
+    val LIGHT_LUX: Float? = SensorConversions.lux(LIGHT_RAW)
+
+    /**
+     * Clean air, by definition, once a baseline is set — the gas chart's reference line is
+     * the baseline itself rather than [GAS_RAW], because Rs/R0 is measured against it.
+     */
+    const val GAS_CLEAN_AIR_RATIO = 1.0f
+
+    /** [FLAME_RAW_DETECT] as a percentage of itself: the alarm point is 100% by construction. */
+    const val FLAME_DETECT_PERCENT = 100.0f
 }

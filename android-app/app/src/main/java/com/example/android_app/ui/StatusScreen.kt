@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,7 +24,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -33,6 +38,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.android_app.data.TimeRange
 import com.example.android_app.ui.components.AlertHistoryCard
 import com.example.android_app.ui.components.DiagnosticsCard
+import com.example.android_app.ui.components.NotificationOnboardingDialog
+import com.example.android_app.ui.components.NotificationSettingsSheet
 import com.example.android_app.ui.components.SensorLineChart
 import com.example.android_app.ui.components.SensorMetric
 import com.example.android_app.ui.components.StatusCard
@@ -43,6 +50,30 @@ import com.example.android_app.ui.components.formatClock
 @Composable
 fun StatusScreen(viewModel: StatusViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var showNotificationSettings by rememberSaveable { mutableStateOf(false) }
+
+    // Hoisted so the first-launch prompt and the Alerts sheet share one instance, and the
+    // address typed into the prompt is still there if it is reopened from the sheet.
+    val notificationViewModel: NotificationViewModel = viewModel()
+    val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { notificationViewModel.checkOnboarding() }
+
+    if (notificationState.showOnboarding) {
+        NotificationOnboardingDialog(
+            isSaving = notificationState.isSaving,
+            errorMessage = notificationState.errorMessage,
+            onEnable = { notificationViewModel.enableFromOnboarding(it) },
+            onDecline = notificationViewModel::declineOnboarding,
+        )
+    }
+
+    if (showNotificationSettings) {
+        NotificationSettingsSheet(
+            onDismiss = { showNotificationSettings = false },
+            viewModel = notificationViewModel,
+        )
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -55,8 +86,14 @@ fun StatusScreen(viewModel: StatusViewModel = viewModel()) {
                             text = "updated ${formatClock(it)}",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 12.dp),
+                            modifier = Modifier.padding(end = 4.dp),
                         )
+                    }
+                    TextButton(
+                        onClick = { showNotificationSettings = true },
+                        enabled = state.isConfigured,
+                    ) {
+                        Text("Alerts")
                     }
                 },
             )

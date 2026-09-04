@@ -6,6 +6,7 @@ import com.example.android_app.data.TrafficLight
 import com.example.android_app.data.diagnose
 import com.example.android_app.data.largestGap
 import com.example.android_app.data.trafficLight
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,7 +15,7 @@ class HistoryDiagnosticsTest {
 
     private fun reading(
         timestamp: Long,
-        status: String = "green",
+        status: String? = "green",
         samples: Int = 20,
         rejected: Int = 0,
         flame: Boolean = false,
@@ -105,5 +106,25 @@ class HistoryDiagnosticsTest {
         // A schema change should look broken, not healthy.
         assertEquals(TrafficLight.UNKNOWN, reading(1_000L, status = "amber").trafficLight)
         assertEquals(TrafficLight.RED, reading(1_000L, status = "RED").trafficLight)
+    }
+
+    @Test
+    fun `a row written before the pipeline stored a status reads as unknown`() {
+        // Rows from that era exist with real alerts on them — one in the live table
+        // carries a flame detection — so defaulting a missing status to green would
+        // paint a green light over "Flame detected during this window!".
+        assertEquals(TrafficLight.UNKNOWN, reading(1_000L, status = null).trafficLight)
+    }
+
+    @Test
+    fun `a missing status field deserialises to unknown rather than green`() {
+        val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
+        val row = json.decodeFromString<SensorReading>(
+            """{"device_id":"arduino-01","timestamp":1785672642,"temperature":31.5,
+               "humidity":45.0,"sound_raw":300.0,"light_raw":400.0,
+               "alerts":["Flame detected during this window!"]}""",
+        )
+        assertEquals(null, row.status)
+        assertEquals(TrafficLight.UNKNOWN, row.trafficLight)
     }
 }

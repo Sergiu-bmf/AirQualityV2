@@ -5,6 +5,8 @@ import java.io.IOException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.HttpException
@@ -60,17 +62,36 @@ class SensorRepository(
         )
     }
 
+    /** Reads the stored notification settings. */
+    suspend fun loadPrefs(): NotificationPrefs =
+        runCatching { api.prefs(apiKey, deviceId) }.getOrElse { throw translate(it) }
+
+    /** Replaces the notification settings, returning what the Lambda actually stored. */
+    suspend fun savePrefs(request: NotificationPrefsRequest): NotificationPrefs =
+        runCatching { api.savePrefs(apiKey, deviceId, request) }.getOrElse { throw translate(it) }
+
     private fun translate(error: Throwable): Throwable = when {
         error is HttpException && error.code() == 401 ->
             SensorApiException("Rejected by the Lambda (401). Check sensor.api.key in local.properties matches the SHARED_SECRET env var.", error)
         error is HttpException && error.code() == 404 ->
             SensorApiException("Route not found (404). Check sensor.api.baseUrl points at the Function URL root.", error)
+        // 400 and 503 from /prefs carry a specific reason in the body — surface it
+        // verbatim, since it names exactly what to fix (a malformed address, an
+        // unset SNS_TOPIC_ARN) far better than the status code does.
+        error is HttpException && error.code() in setOf(400, 502, 503) ->
+            SensorApiException(serverMessage(error) ?: "Lambda returned HTTP ${error.code()}.", error)
         error is HttpException ->
             SensorApiException("Lambda returned HTTP ${error.code()}.", error)
         error is IOException ->
             SensorApiException("Can't reach the Lambda — check your connection and the Function URL.", error)
         else -> error
     }
+
+    /** Pulls the Lambda's own {"error": "..."} out of a failed response, if present. */
+    private fun serverMessage(error: HttpException): String? = runCatching {
+        val body = error.response()?.errorBody()?.string().orEmpty()
+        json.parseToJsonElement(body).jsonObject["error"]?.jsonPrimitive?.content
+    }.getOrNull()
 
     companion object {
         /** True when local.properties hasn't been filled in yet. */
