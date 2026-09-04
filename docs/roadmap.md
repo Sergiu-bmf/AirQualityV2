@@ -26,7 +26,7 @@
 
     !!! note "An ntfy channel was built and removed"
 
-        It worked , real push notifications in seconds , but arrived in the ntfy app rather
+        It worked, real push notifications in seconds, but arrived in the ntfy app rather
         than this one, and was dropped at the owner's request. `notify()` still fans out over
         a list and the Lambda still stores `channels` as a set, so adding a channel back is a
         one-line change rather than a reshape.
@@ -36,7 +36,7 @@
 - **Real authentication** on the Lambda, replacing the shared-secret query parameter.
 - **Python tests.** `tests/` is empty.
 - **Multiple devices.** `device_id` is effectively fixed at `arduino-01`.
-- **Standalone Arduino operation** , SD logging was built and then removed; WiFi and an RTC
+- **Standalone Arduino operation**, SD logging was built and then removed; WiFi and an RTC
   remain researched but unpurchased. See [Hardware](hardware.md#standalone-operation).
 
 ## Rough priority

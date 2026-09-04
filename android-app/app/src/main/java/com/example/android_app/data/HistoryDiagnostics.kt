@@ -6,7 +6,7 @@ package com.example.android_app.data
  * spacing between rows.
  *
  * This matters because a chart drawn from four rows looks exactly like a chart drawn
- * from four hundred , without this, a mostly-offline device reads as a calm one.
+ * from four hundred, without this, a mostly-offline device reads as a calm one.
  */
 data class HistoryDiagnostics(
     val windowCount: Int,
@@ -19,7 +19,7 @@ data class HistoryDiagnostics(
     val redCount: Int,
     val flameWindows: Int,
 ) {
-    /** Rows present vs. rows expected, clamped , a burst of catch-up writes isn't >100%. */
+    /** Rows present vs. rows expected, clamped, a burst of catch-up writes isn't >100%. */
     val coverage: Float
         get() = if (expectedWindows <= 0) 0f else (windowCount.toFloat() / expectedWindows).coerceIn(0f, 1f)
 
@@ -52,7 +52,7 @@ fun diagnose(readings: List<SensorReading>, range: TimeRange): HistoryDiagnostic
 
 /**
  * Longest silence between consecutive timestamps, in seconds. Returns 0 for fewer than
- * two samples , one row can't establish a gap, and reporting the whole range as a gap
+ * two samples, one row can't establish a gap, and reporting the whole range as a gap
  * would overstate what we know.
  */
 fun largestGap(timestamps: List<Long>): Long {

@@ -18,7 +18,7 @@ If the flame sensor trips, it emails you within about two seconds.
 - **Samples six sensors** every ~2 seconds and shows an instant traffic light (green /
   yellow / red LEDs plus a buzzer) directly on the breadboard, with no computer involved.
 - **Averages a 60-second window** of readings and stores one row per window in DynamoDB,
-  then idles for 180 seconds , roughly one row every four minutes, ~360 rows a day.
+  then idles for 180 seconds, roughly one row every four minutes, ~360 rows a day.
 - **Rejects physically impossible readings** before they enter an average, and records how
   many were rejected so the app can say how solid each window is.
 - **Emails you the moment a flame is detected**, independently of the storage cycle, with
@@ -51,14 +51,14 @@ the phone. The pipeline is the only component with write access to the table.
 1. **Alerts only exist while the pipeline is running.** The laptop is what watches the
    flame sensor. Close the lid and the Arduino's own buzzer still fires, but no email does.
 2. **The Arduino's LEDs and the stored status are computed independently**, from
-   thresholds duplicated by hand in three places. They can disagree , see
+   thresholds duplicated by hand in three places. They can disagree, see
    [the documentation site](https://sergiu-bmf.github.io/AirQualityV2/).
 
 ## Hardware
 
 | Component | Purpose | Pin |
 |---|---|---|
-| Arduino Uno R3 | Main board | , |
+| Arduino Uno R3 | Main board |, |
 | DHT11 | Temperature + humidity | D2 |
 | HW-484 sound sensor | Sound level | A0 |
 | Photoresistor (LDR) + 10kΩ | Ambient light | A1 |
@@ -85,7 +85,7 @@ data coverage → alert history → one line chart per metric.
 |---|---|---|
 | ![Onboarding prompt asking for an email](docs/images/app-onboarding-prompt.png) | ![Alerts sheet with email disabled](docs/images/app-alerts-sheet-off.png) | ![Alerts sheet with an address saved](docs/images/app-alerts-sheet-on.png) |
 
-The prompt appears on every launch until an email address is set , an unconfigured fire
+The prompt appears on every launch until an email address is set, an unconfigured fire
 alarm should keep saying so rather than being silenced by one stray tap. Declining is
 recorded server-side so the pipeline can tell a deliberate silence from a device nobody
 has configured.
@@ -114,7 +114,7 @@ aws configure                                                      # region eu-c
 ```
 The serial port is auto-detected by USB vendor ID, so it survives the board coming back as
 `/dev/ttyACM1` after a replug. Notification settings are read from `pipeline/.env`
-(gitignored , it holds the Lambda's shared secret):
+(gitignored; it holds the Lambda's shared secret):
 
 ```
 AIRQ_LAMBDA_URL=https://<id>.lambda-url.eu-central-1.on.aws
@@ -131,7 +131,7 @@ All optional. Unset means that piece is switched off.
 - **SNS** topic for the alerts.
 - **Two separate identities need permissions** and are easy to conflate: the IAM *user*
   the pipeline authenticates as needs `sns:Publish`; the Lambda's *role* needs
-  `dynamodb:GetItem`/`PutItem` and `sns:Subscribe` , see `aws/lambda-role-policy.json`.
+  `dynamodb:GetItem`/`PutItem` and `sns:Subscribe`, see `aws/lambda-role-policy.json`.
 
 ### 4. Android app
 Put three keys in `android-app/local.properties` (gitignored):
@@ -162,7 +162,7 @@ These are real and deliberate to document rather than hide:
   ![The confirmation email flagged as suspicious](docs/images/email-confirmation-spam.png)
 - **A flame between sampling windows is timestamped late.** Alerting runs continuously but
   storage samples 60s in every 240s, so a flame during the idle stretch is attributed to
-  the next stored row , up to ~3 minutes later than it happened.
+  the next stored row, up to ~3 minutes later than it happened.
 - **No RTC on the Arduino.** Timestamps come from the laptop's clock; the board alone only
   knows time since power-on.
 - **Thresholds are duplicated by hand** across the sketch, the pipeline and the app, with
@@ -170,7 +170,7 @@ These are real and deliberate to document rather than hide:
 
 ## Documentation
 
-Full documentation is published at **<https://sergiu-bmf.github.io/AirQualityV2/>** , hardware
+Full documentation is published at **<https://sergiu-bmf.github.io/AirQualityV2/>**, hardware
 and wiring, sensor calibration, how the pipeline works, the AWS setup, the app's design
 decisions, known limitations, and a chronological debugging log.
 

@@ -18,11 +18,11 @@ DHT dht(DHTPIN, DHTTYPE);
 const float TEMP_HIGH = 28.0;       // C - above this counts as "warm"
 const float HUMIDITY_HIGH = 50.0;   // % - above this counts as "humid"
 const int SOUND_HIGH = 550;         // raw ADC ~ corresponds to ~80dB per your calibration
-const int LIGHT_HIGH = 800;         // raw ADC ~ "too bright" , this is relative to your
+const int LIGHT_HIGH = 800;         // raw ADC ~ "too bright", this is relative to your
                                      // LDR/resistor pairing, tune based on your own readings
 
 // ---- Gas sensor (MQ-135) threshold ----
-// PLACEHOLDER , MQ-135 needs a warm-up period (can take a while for the
+// PLACEHOLDER, MQ-135 needs a warm-up period (can take a while for the
 // heating element to stabilize) before readings are meaningful, and the
 // "normal" baseline varies by unit and environment. Once you have the
 // sensor, let it warm up, note its resting value in clean air, and set

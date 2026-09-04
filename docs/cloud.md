@@ -1,6 +1,6 @@
 # Cloud
 
-Everything is created by hand through the console or CLI , there is no infrastructure-as-code
+Everything is created by hand through the console or CLI; there is no infrastructure-as-code
 in this project. `aws/lambda-role-policy.json` is the one exception, and exists precisely
 because nothing else records what the Lambda needs.
 
@@ -29,7 +29,7 @@ does nothing for the others.
 - **Region:** `eu-central-1` (Frankfurt)
 - **Partition key:** `device_id` (String)
 - **Sort key:** `timestamp` (Number)
-- **Billing:** on-demand (`PAY_PER_REQUEST`) , no capacity planning, free-tier friendly at
+- **Billing:** on-demand (`PAY_PER_REQUEST`), no capacity planning, free-tier friendly at
   this volume
 
 !!! note "No S3 is involved"
@@ -69,7 +69,7 @@ param defaulting to `arduino-01`. Anything unmatched 404s.
 !!! note "`/history` paginates, and it must"
 
     A single DynamoDB `query()` page caps at 1 MB, which multi-day ranges exceed. Because
-    results come back **ascending**, an unpaginated read drops the *newest* rows , the chart
+    results come back **ascending**, an unpaginated read drops the *newest* rows, the chart
     would look complete while missing the last few hours. The handler loops on
     `LastEvaluatedKey` up to `MAX_HISTORY_ITEMS` (3000, ~8 days) and sets `"truncated": true`
     when it stops early, which the app surfaces as a banner.
@@ -82,7 +82,7 @@ param defaulting to `arduino-01`. Anything unmatched 404s.
 
     Both produce an empty `channels` list, and they must mean opposite things. Unconfigured
     lets the pipeline fall back to its local settings; explicitly-off must silence it.
-    Conflating them once silently disabled alerting entirely , the pipeline saw an empty list
+    Conflating them once silently disabled alerting entirely, the pipeline saw an empty list
     and went quiet, while the local `.env` was still perfectly configured.
 
 ## Authentication
@@ -95,7 +95,7 @@ secret in a query parameter.
     The secret check is skipped entirely when `SHARED_SECRET` is unset, so a missing
     environment variable silently makes the whole endpoint public.
 
-    The **write** route deliberately fails closed instead , `POST /prefs` returns 503 when the
+    The **write** route deliberately fails closed instead, `POST /prefs` returns 503 when the
     secret is unset. A route that subscribes arbitrary email addresses would otherwise be an
     open spam relay.
 
@@ -103,7 +103,7 @@ secret in a query parameter.
 
 Topic `AirQualityAlerts` in `eu-central-1`, email protocol.
 
-- **Email delivery is in the always-free tier** , 1,000 notifications/month, then $2.00 per
+- **Email delivery is in the always-free tier**, 1,000 notifications/month, then $2.00 per
   100,000. The alert de-duplication keeps usage far below that; without it, a stuck sensor at
   one reading every 2 s would be ~1.3 million emails a month.
 - **SMS is not free** and is billed separately under AWS End User Messaging. This project only
@@ -122,7 +122,7 @@ Topic `AirQualityAlerts` in `eu-central-1`, email protocol.
 
 `sns:Unsubscribe` acts on a *subscription* ARN rather than the topic ARN, so scoping it to the
 topic may not be sufficient. Unsubscribe failures are swallowed by design so they cannot break
-saving settings , which means this fails quietly, and mail simply keeps arriving.
+saving settings, which means this fails quietly, and mail simply keeps arriving.
 
 ## Deploying the Lambda
 
@@ -135,5 +135,5 @@ aws lambda update-function-code --function-name sensor-api \
 aws lambda wait function-updated --function-name sensor-api --region eu-central-1
 ```
 
-Back up the current code first , `aws lambda get-function --query 'Code.Location'` gives a
-download URL , so a rollback is one command.
+Back up the current code first, `aws lambda get-function --query 'Code.Location'` gives a
+download URL, so a rollback is one command.

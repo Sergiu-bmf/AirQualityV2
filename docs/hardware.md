@@ -9,12 +9,12 @@ separately-purchased gas sensor. Only a subset of the kit is used.
 
 | Component | Purpose | Pin | Source |
 |---|---|---|---|
-| Arduino Uno R3 | Main board | , | Kit |
+| Arduino Uno R3 | Main board |, | Kit |
 | DHT11 | Temperature + humidity | `D2` | Kit |
 | Sound sensor (HW-484, KY-038 family) | Sound level | `A0` | Kit |
-| Photoresistor (LDR) | Ambient light | `A1` | Kit , bare component, needs a resistor |
+| Photoresistor (LDR) | Ambient light | `A1` | Kit, bare component, needs a resistor |
 | MQ-135 | Gas / air quality | `A2` | Purchased separately |
-| Flame sensor (bare 2-leg phototransistor) | Flame detection | `A5` | Kit , bare component, needs a resistor |
+| Flame sensor (bare 2-leg phototransistor) | Flame detection | `A5` | Kit, bare component, needs a resistor |
 | 3 × LED (green / yellow / red) | Traffic-light status | `D4` `D5` `D6` | Kit |
 | Buzzer | Audible alarm | `D7` | Kit |
 | 9V battery + barrel connector | Standalone power (unused) | Power jack | Kit |
@@ -23,7 +23,7 @@ separately-purchased gas sensor. Only a subset of the kit is used.
 
 -   ![Status LEDs and buzzer](images/hardware-leds-buzzer.jpg)
 
-    The traffic light and buzzer , the only part that works with no computer attached
+    The traffic light and buzzer, the only part that works with no computer attached
 
 -   ![MQ-135 gas sensor](images/hardware-mq135.jpg)
 
@@ -37,20 +37,20 @@ separately-purchased gas sensor. Only a subset of the kit is used.
 
 ## Resistors
 
-Identified by colour band from an unlabelled kit assortment , confirm with a multimeter if
+Identified by colour band from an unlabelled kit assortment, confirm with a multimeter if
 in doubt:
 
-- **~100 Ω** , current limiting for the three status LEDs
-- **~1 kΩ** , spare
-- **~10 kΩ** , voltage dividers for the LDR and the flame sensor
+- **~100 Ω**, current limiting for the three status LEDs
+- **~1 kΩ**, spare
+- **~10 kΩ**, voltage dividers for the LDR and the flame sensor
 
 ## Wiring
 
-**LDR** , `5V → LDR → tap to A1 → 10 kΩ → GND`. Higher raw ADC means more light. This
+**LDR**, `5V → LDR → tap to A1 → 10 kΩ → GND`. Higher raw ADC means more light. This
 orientation is what makes the resistance formula in [Calibration](calibration.md#light-ldr)
 valid; reversing the divider inverts it.
 
-**Flame sensor** , a bare component, *not* a pre-built digital module. Long leg (anode) to
+**Flame sensor**, a bare component, *not* a pre-built digital module. Long leg (anode) to
 `5V`; short leg (cathode) to `A5` **and** through 10 kΩ to `GND`.
 
 !!! warning "The legs need swapping from the 'standard' orientation"
@@ -59,15 +59,15 @@ valid; reversing the divider inverts it.
     with a 0→10 swing. Swapping the legs gave a usable one: ~3 at rest, ~700 with a flame
     held close. See the [debugging log](debugging-log.md).
 
-**LEDs** , each needs its own ~100 Ω resistor between the Arduino pin and the anode.
+**LEDs**: each needs its own ~100 Ω resistor between the Arduino pin and the anode.
 
-**Buzzer, sound and gas modules** , pre-built, no external resistor. VCC / GND / signal only.
+**Buzzer, sound and gas modules**, pre-built, no external resistor. VCC / GND / signal only.
 
 !!! danger "This breadboard has a split ground rail"
 
     The power and ground rails are physically two disconnected halves. Components on
     opposite halves do **not** share ground unless the halves are bridged with a jumper.
-    This cost a long debugging detour that looked exactly like a floating-pin fault , see
+    This cost a long debugging detour that looked exactly like a floating-pin fault, see
     [entry 9 in the debugging log](debugging-log.md).
 
 ## Standalone operation
@@ -75,7 +75,7 @@ valid; reversing the divider inverts it.
 Researched, not implemented. The board currently depends on a laptop for both storage and
 alerting.
 
-- **Flash (32 KB)** holds the compiled sketch permanently , the Arduino does not need a
+- **Flash (32 KB)** holds the compiled sketch permanently; the Arduino does not need a
   computer to *run*, only to record.
 - **SRAM (2 KB)** is volatile working memory, lost on power cut.
 - **EEPROM (1 KB)** is too small and too write-limited for continuous logging.
@@ -90,8 +90,8 @@ alerting.
 
 - **For standalone networking** you would need an ESP8266 shield, a switch to ESP32,
   Bluetooth (short range), or GSM/LoRa for remote sites.
-- **Power** , the 9V battery works but holds only ~400–600 mAh. Expect hours, not days,
+- **Power**, the 9V battery works but holds only ~400–600 mAh. Expect hours, not days,
   especially with the LEDs and buzzer active. A LiPo pack would be the better choice.
-- **RTC** , available in the kit, deliberately not added. The pipeline timestamps from the
+- **RTC**, available in the kit, deliberately not added. The pipeline timestamps from the
   laptop's NTP-synced clock, and the whole system currently requires that laptop anyway.
   Without an RTC the board only knows time since power-on.

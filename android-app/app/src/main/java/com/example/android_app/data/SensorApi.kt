@@ -27,7 +27,7 @@ interface SensorApi {
         @Query("end") end: Long,
     ): HistoryResponse
 
-    /** Current notification settings. Never 404s , unset settings are an empty result. */
+    /** Current notification settings. Never 404s, unset settings are an empty result. */
     @GET("prefs")
     suspend fun prefs(
         @Query("key") key: String,

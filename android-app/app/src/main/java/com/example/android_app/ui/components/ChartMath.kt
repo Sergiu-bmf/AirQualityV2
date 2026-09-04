@@ -18,7 +18,7 @@ data class SeriesStats(
     val first: Float,
     val latest: Float,
 ) {
-    /** Net change from the oldest to the newest sample , sign carries the trend. */
+    /** Net change from the oldest to the newest sample, sign carries the trend. */
     val delta: Float get() = latest - first
 }
 
@@ -119,7 +119,7 @@ object ChartMath {
      * keeps the shape while cutting the path length.
      *
      * Averaging (rather than sampling every Nth point) is the right call here because
-     * the underlying rows are themselves averages , but it does flatten brief spikes, so
+     * the underlying rows are themselves averages, but it does flatten brief spikes, so
      * the min/max in [statsOf] is always computed on the *full* series, not this one.
      */
     fun downsample(points: List<ChartPoint>, maxPoints: Int): List<ChartPoint> {

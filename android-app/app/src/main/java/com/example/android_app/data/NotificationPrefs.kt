@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 /**
  * Notification settings as stored by the Lambda's `/prefs` route.
  *
- * These do not reach the phone , they reach the *pipeline*, which is what watches the
+ * These do not reach the phone, they reach the *pipeline*, which is what watches the
  * flame sensor. The app is only the place you edit them.
  */
 @Serializable
@@ -14,7 +14,7 @@ data class NotificationPrefs(
     @SerialName("device_id") val deviceId: String = "",
     /**
      * False until someone has actually saved settings. It is what separates "nobody has
-     * ever chosen" from "chose to receive nothing" , both have an empty [channels] list,
+     * ever chosen" from "chose to receive nothing", both have an empty [channels] list,
      * and they must mean opposite things: the first prompts on launch and lets the
      * pipeline fall back to its local config, the second stays silent forever.
      *
@@ -27,7 +27,7 @@ data class NotificationPrefs(
     /**
      * "none", "pending" or "confirmed". SNS will not deliver a single email until the
      * address clicks the link AWS sends it, and a pending subscription is indistinguishable
-     * from a working one until the moment you actually need it , so this is surfaced in
+     * from a working one until the moment you actually need it, so this is surfaced in
      * the UI rather than hidden.
      */
     @SerialName("email_status") val emailStatus: String = "none",
@@ -40,7 +40,7 @@ data class NotificationPrefs(
     }
 }
 
-/** Body of a `POST /prefs`. Sent whole , the route replaces rather than merges. */
+/** Body of a `POST /prefs`. Sent whole, the route replaces rather than merges. */
 @Serializable
 data class NotificationPrefsRequest(
     val channels: List<String>,

@@ -37,7 +37,7 @@ import kotlin.math.abs
 private const val MAX_PLOT_POINTS = 220
 
 /**
- * A single-series line chart drawn straight onto a Compose [Canvas] , no charting
+ * A single-series line chart drawn straight onto a Compose [Canvas], no charting
  * library.
  *
  * Three things it does that a naive line chart doesn't:
@@ -65,7 +65,7 @@ fun SensorLineChart(
     ) {
         Column(Modifier.padding(16.dp)) {
             // Reset the cursor whenever the underlying series changes (refresh, range
-            // switch) , keeping an index into a replaced list would point at nothing.
+            // switch), keeping an index into a replaced list would point at nothing.
             var cursor by remember(points) { mutableStateOf<Int?>(null) }
 
             val rendered = remember(points) {
@@ -98,7 +98,7 @@ fun SensorLineChart(
             val thresholdColor = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
             val cursorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
             // An off-scale reference line would be pinned to the frame edge and read as
-            // "we're right at the limit", so it is simply not drawn , the stats strip
+            // "we're right at the limit", so it is simply not drawn, the stats strip
             // still states the number.
             val drawableThreshold = metric.threshold?.takeIf { it in bounds }
 
@@ -164,7 +164,7 @@ fun SensorLineChart(
                     )
 
                     if (offsets.size == 1) {
-                        // An isolated reading has no line to draw , mark the point.
+                        // An isolated reading has no line to draw, mark the point.
                         drawCircle(color = metric.color, radius = 5f, center = offsets.first())
                     } else {
                         val line = Path().apply {

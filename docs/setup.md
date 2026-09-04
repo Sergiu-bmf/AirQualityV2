@@ -6,7 +6,7 @@ Four independent pieces. The Arduino works alone; each layer above it adds capab
 
 Flash `arduino/sensor_data.ino` with the Arduino IDE or CLI. It needs the **DHT** library.
 
-From this point the LEDs and buzzer work with nothing else attached , no laptop, no network.
+From this point the LEDs and buzzer work with nothing else attached, no laptop, no network.
 Everything below is about *recording* and *notifying*.
 
 ## 2. Pipeline
@@ -39,20 +39,20 @@ shows up immediately rather than during a fire.
 
 ## 3. AWS
 
-**DynamoDB** , table `SensorReadings`, partition key `device_id` (String), sort key
+**DynamoDB**, table `SensorReadings`, partition key `device_id` (String), sort key
 `timestamp` (Number), on-demand billing.
 
-**Lambda** , function `sensor-api`, Python 3.12, handler `lambda_function.handler` (*not* the
+**Lambda**, function `sensor-api`, Python 3.12, handler `lambda_function.handler` (*not* the
 pre-filled default), environment `TABLE_NAME`, `SHARED_SECRET`, `SNS_TOPIC_ARN`. Enable a
 Function URL with auth type `NONE`.
 
-**SNS** , create the topic:
+**SNS**, create the topic:
 
 ```bash
 aws sns create-topic --name AirQualityAlerts --region eu-central-1
 ```
 
-**IAM** , two grants on two different identities. See [Cloud](cloud.md#three-identities-easy-to-conflate)
+**IAM**, two grants on two different identities. See [Cloud](cloud.md#three-identities-easy-to-conflate)
 for why neither covers the other.
 
 On the pipeline's IAM user:
@@ -68,7 +68,7 @@ On the pipeline's IAM user:
 }
 ```
 
-On the Lambda's execution role , this is `aws/lambda-role-policy.json` in the repo:
+On the Lambda's execution role (this is `aws/lambda-role-policy.json` in the repo):
 
 ```json
 {
@@ -94,7 +94,7 @@ On the Lambda's execution role , this is `aws/lambda-role-policy.json` in the re
     `PutItem`, saving from the app fails with a 502; without `GetItem`, the pipeline can never
     read what you saved.
 
-IAM changes take effect within seconds , no redeploy needed.
+IAM changes take effect within seconds, no redeploy needed.
 
 ## 4. Android app
 
@@ -139,7 +139,7 @@ aws dynamodb query --region eu-central-1 --table-name SensorReadings \
 
 Then hold a flame near the sensor. The buzzer should fire instantly, the terminal should print
 `!!! FLAME DETECTED !!!` followed by `Notified via email.`, and the email should arrive within
-seconds , **check your spam folder**.
+seconds, **check your spam folder**.
 
 ## Building this documentation
 
@@ -162,7 +162,7 @@ python3 -m venv .venv          # once; .venv/ is gitignored
 
     Do **not** reach for `--break-system-packages` here. That is the right call for the
     pipeline's dependencies, which your script has to import, but wrong for a standalone
-    tool , it writes into the Python that `apt` manages, for no benefit.
+    tool; it writes into the Python that `apt` manages, for no benefit.
 
 Pushing to `master` deploys the site via `.github/workflows/docs.yml`, which installs
 Zensical in a clean runner where none of this applies. Set **Settings → Pages → Source** to

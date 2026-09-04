@@ -69,18 +69,18 @@ back to green, so a schema change looks broken instead of looking healthy.
 
 !!! note "Why `status` is nullable"
 
-    Rows written before the pipeline computed a status still exist in the table , *with flame
+    Rows written before the pipeline computed a status still exist in the table, *with flame
     alerts on them*. A `"green"` default painted those healthy, showing a green light above a
     card reading "Flame detected during this window!".
 
 ### Other behaviours worth knowing
 
-- **404 from `/latest` is an empty state, not an error** , it means "no rows for this device
+- **404 from `/latest` is an empty state, not an error**: it means "no rows for this device
   yet". Every other failure becomes a message naming the thing to fix (401 → the shared
   secret, 404 on a route → the base URL, `IOException` → connectivity), surfaced verbatim.
 - **Refreshes cancel rather than queue**, so a rapid range switch can't let a stale response
   land after a newer one.
-- **Every chart shares one time axis** , the range that was actually queried, not each
+- **Every chart shares one time axis**, the range that was actually queried, not each
   series' own extent, so a metric that started reporting halfway through lines up with the
   others.
 - **Long ranges are downsampled before drawing** (cap 220 points; a week is ~2500 rows against
@@ -95,11 +95,11 @@ back to green, so a schema change looks broken instead of looking healthy.
 ## Notification settings
 
 The Alerts sheet edits settings that live **server-side**, because they are read by the
-pipeline on the laptop , nothing here makes the phone itself listen for anything.
+pipeline on the laptop; nothing here makes the phone itself listen for anything.
 
 The launch prompt appears whenever no email address is set, on every launch. Declining closes
 it for the session and is recorded server-side as an empty channel list, so the pipeline reads
-it as a deliberate silence , but it returns next launch. An unconfigured fire alarm should
+it as a deliberate silence, but it returns next launch. An unconfigured fire alarm should
 keep saying so rather than being permanently dismissed by one tap.
 
 No Android notification permission is involved: the alert is an email, so there is no system
@@ -116,7 +116,7 @@ sensor.deviceId=arduino-01
 ```
 
 They are compile-time constants, so changing any of them requires a rebuild. With a blank
-`baseUrl` the app renders a setup card instead of data , that is the expected unconfigured
+`baseUrl` the app renders a setup card instead of data. That is the expected unconfigured
 state, not a bug.
 
 ## Tests

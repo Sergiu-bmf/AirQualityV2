@@ -116,7 +116,7 @@ class ChartMathTest {
         val points = listOf(
             ChartPoint(1_000L, 1f),
             ChartPoint(1_240L, 2f),
-            // Four hours of nothing , the pipeline was not running.
+            // Four hours of nothing, the pipeline was not running.
             ChartPoint(15_640L, 3f),
             ChartPoint(15_880L, 4f),
         )

@@ -6,9 +6,9 @@ different amount of evidence behind it, and this page is explicit about which.
 | Sensor | Reported as | Confidence |
 |---|---|---|
 | DHT11 | °C and % directly | Datasheet, ±2 °C / ±5 % |
-| Sound | dB | **Measured** , 4 points, fitted curve |
-| Light | lux | **Assumed** , unverified curve for an unidentified part |
-| Gas | raw ADC | **Uncalibrated** , conversion built but dormant |
+| Sound | dB | **Measured**, 4 points, fitted curve |
+| Light | lux | **Assumed**, unverified curve for an unidentified part |
+| Gas | raw ADC | **Uncalibrated**, conversion built but dormant |
 | Flame | % of alarm threshold | Measured, but the resting value drifts |
 
 ## Sound (HW-484) → decibels
@@ -29,7 +29,7 @@ dB = 33.39 * ln(raw) - 137.59
 ```
 
 Implemented as `raw_to_db()` in the pipeline. Valid only inside the measured ~40–80 dB
-range and unreliable outside it. Calibrated against a phone app, not a lab reference , good
+range and unreliable outside it. Calibrated against a phone app, not a lab reference, good
 for trends, not for certified numbers.
 
 !!! note "dB is computed from the averaged raw value"
@@ -39,7 +39,7 @@ for trends, not for certified numbers.
 
 ## Light (LDR)
 
-Converted to **approximate lux**, in the app at read time , the stored value is still raw
+Converted to **approximate lux**, in the app at read time, the stored value is still raw
 ADC.
 
 The divider maths is exact, given the wiring in [Hardware](hardware.md#wiring):
@@ -73,14 +73,14 @@ tail onto rows already written under the old value.
 
 - Initial wiring per the standard leg convention gave a flat, unusable 0→10 swing.
   **Swapping the legs** fixed it: resting ~3, flame at close range ~700.
-- Threshold set to **150** , below the 350 midpoint, to stay sensitive to flames that are
+- Threshold set to **150**, below the 350 midpoint, to stay sensitive to flames that are
   not directly adjacent, while staying safely above the resting noise floor.
-- Direction: `flameRaw > FLAME_THRESHOLD` , the value *increases* with flame present.
+- Direction: `flameRaw > FLAME_THRESHOLD`, the value *increases* with flame present.
 
 !!! warning "The resting value has drifted"
 
     Later observations show it anywhere from ~8 to ~56 raw depending on ambient infrared ,
-    daylight, warm lamps , against the ~3 originally recorded. With the threshold at 150
+    daylight, warm lamps, against the ~3 originally recorded. With the threshold at 150
     that is still workable headroom, but it is worth re-checking before trusting the
     alerting overnight: a false trip now sends an email.
 
@@ -95,7 +95,7 @@ uncomfortably close to that line.
 
 An Rs/R₀ conversion is implemented and dormant. Set `GAS_CLEAN_AIR_RAW` in
 `SensorConversions.kt` to the raw value the sensor settles at in clean air after warm-up,
-and the app's gas metric switches itself from raw ADC to a ratio , unit, number format and
+and the app's gas metric switches itself from raw ADC to a ratio, unit, number format and
 reference line together. Until then it deliberately keeps showing raw rather than inventing
 a ratio from a guessed baseline.
 
@@ -114,7 +114,7 @@ Rs/R₀ = [(1023 - raw) / raw] ÷ [(1023 - baseline) / baseline]
 !!! danger "Why not ppm"
 
     The MQ-135 responds to CO₂, ammonia, benzene and smoke together and cannot distinguish
-    them. Any single ppm figure is fiction without calibration against a reference gas , the
+    them. Any single ppm figure is fiction without calibration against a reference gas, the
     widely-copied `ppm = 116.6 × (Rs/R₀)^-2.77` formula included.
 
 ## Thresholds are duplicated in three places
@@ -127,7 +127,7 @@ There is no shared source of truth, and nothing enforces that these match:
 | `pipeline/sensor_pipeline.py` | `TEMP_ALERT_HIGH`, `HUMIDITY_ALERT_HIGH`, `SOUND_DB_ALERT_HIGH`, `LIGHT_ALERT_HIGH`, `GAS_ALERT_HIGH` | The stored `alerts` and `status`, per window |
 | `…/ui/components/AlertThresholds.kt` | `TEMPERATURE_C`, `HUMIDITY_PERCENT`, `SOUND_DB`, `LIGHT_RAW`, `GAS_RAW`, `FLAME_RAW_DETECT` | Chart reference lines, display only |
 
-Change one and the others silently desync , the LED can disagree with the stored status, or
+Change one and the others silently desync, the LED can disagree with the stored status, or
 a chart's reference line with the traffic light above it.
 
 Note the Arduino compares **raw ADC** sound (`SOUND_HIGH = 550`) while the pipeline and app
@@ -138,4 +138,4 @@ numbers.
 
     `is_valid_reading()` rejects physically impossible sensor glitches before a reading
     enters an average. `check_alerts()` runs afterwards on the averaged values and is about
-    real-world thresholds. The split is intentional , see [Pipeline](pipeline.md).
+    real-world thresholds. The split is intentional, see [Pipeline](pipeline.md).

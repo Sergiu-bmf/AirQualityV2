@@ -26,7 +26,7 @@ class SensorApiException(message: String, cause: Throwable? = null) : Exception(
 
 /**
  * Talks to the Lambda Function URL. The app never touches DynamoDB directly, so no AWS
- * credentials exist on the device , the only secret here is the shared `key` param.
+ * credentials exist on the device, the only secret here is the shared `key` param.
  */
 class SensorRepository(
     private val api: SensorApi = defaultApi(),
@@ -38,7 +38,7 @@ class SensorRepository(
      * Fetches the latest reading and the history window concurrently.
      *
      * A 404 from `/latest` means "no rows for this device yet", which is a normal empty
-     * state rather than a failure , it maps to a null [SensorSnapshot.latest]. Any other
+     * state rather than a failure, it maps to a null [SensorSnapshot.latest]. Any other
      * error propagates as [SensorApiException] with a message that says what to fix.
      */
     suspend fun snapshot(range: TimeRange, nowSeconds: Long): SensorSnapshot = coroutineScope {
@@ -75,7 +75,7 @@ class SensorRepository(
             SensorApiException("Rejected by the Lambda (401). Check sensor.api.key in local.properties matches the SHARED_SECRET env var.", error)
         error is HttpException && error.code() == 404 ->
             SensorApiException("Route not found (404). Check sensor.api.baseUrl points at the Function URL root.", error)
-        // 400 and 503 from /prefs carry a specific reason in the body , surface it
+        // 400 and 503 from /prefs carry a specific reason in the body, surface it
         // verbatim, since it names exactly what to fix (a malformed address, an
         // unset SNS_TOPIC_ARN) far better than the status code does.
         error is HttpException && error.code() in setOf(400, 502, 503) ->
@@ -83,7 +83,7 @@ class SensorRepository(
         error is HttpException ->
             SensorApiException("Lambda returned HTTP ${error.code()}.", error)
         error is IOException ->
-            SensorApiException("Can't reach the Lambda , check your connection and the Function URL.", error)
+            SensorApiException("Can't reach the Lambda, check your connection and the Function URL.", error)
         else -> error
     }
 

@@ -13,7 +13,7 @@ if [ -f pipeline/.env ]; then
   source pipeline/.env
   set +a
 else
-  echo "No pipeline/.env found , running without notifications." >&2
+  echo "No pipeline/.env found, running without notifications." >&2
 fi
 
 exec python3 pipeline/sensor_pipeline.py "$@"

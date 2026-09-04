@@ -73,7 +73,7 @@ class NotificationPrefsTest {
 
     private fun prefs(body: String) = json.decodeFromString<NotificationPrefs>(body)
 
-    // The launch prompt asks whenever no address is set , not "if never asked". These pin
+    // The launch prompt asks whenever no address is set, not "if never asked". These pin
     // that rule, because it is the difference between a fire alarm that keeps reminding
     // you it isn't wired up and one that goes quiet after a single stray tap.
 

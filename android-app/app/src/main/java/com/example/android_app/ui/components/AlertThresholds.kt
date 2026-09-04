@@ -1,7 +1,7 @@
 package com.example.android_app.ui.components
 
 /**
- * Threshold lines drawn on the charts, for context only , the app never evaluates them.
+ * Threshold lines drawn on the charts, for context only, the app never evaluates them.
  * Alerting happens in `pipeline/sensor_pipeline.py`, which precomputes `status` and
  * `alerts` into each row.
  *
@@ -34,7 +34,7 @@ object AlertThresholds {
     val LIGHT_LUX: Float? = SensorConversions.lux(LIGHT_RAW)
 
     /**
-     * Clean air, by definition, once a baseline is set , the gas chart's reference line is
+     * Clean air, by definition, once a baseline is set, the gas chart's reference line is
      * the baseline itself rather than [GAS_RAW], because Rs/R0 is measured against it.
      */
     const val GAS_CLEAN_AIR_RATIO = 1.0f

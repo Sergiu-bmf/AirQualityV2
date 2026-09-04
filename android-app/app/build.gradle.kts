@@ -7,7 +7,7 @@ plugins {
 }
 
 // The Lambda Function URL and its shared secret live in local.properties, which is
-// gitignored , they are deployment config, not source. See README-style notes at the
+// gitignored, they are deployment config, not source. See README-style notes at the
 // bottom of this file for the keys to set.
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")

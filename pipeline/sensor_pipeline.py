@@ -14,8 +14,8 @@ from decimal import Decimal
 # like "/dev/ttyACM0" only to force a specific port (e.g. two boards plugged in at once).
 #
 # Auto-detection exists because the number on the end of /dev/ttyACM* is not stable: the
-# kernel hands out the next free one, so replugging the board , or a reset while the old
-# node is still held , moves it from ttyACM0 to ttyACM1 and a hard-coded path then fails
+# kernel hands out the next free one, so replugging the board, or a reset while the old
+# node is still held, moves it from ttyACM0 to ttyACM1 and a hard-coded path then fails
 # with "No such file or directory" even though the Arduino is sitting right there.
 SERIAL_PORT = None
 
@@ -38,7 +38,7 @@ IDLE_SECONDS = 60              # how long to pausebetween windows
 # A flame is the ONLY condition that reaches a phone. Everything else stays in the app on
 # purpose: a notification you learn to swipe away is worse than no notification at all.
 #
-# Both channels are optional and independent , set either, both, or neither. Leaving both
+# Both channels are optional and independent, set either, both, or neither. Leaving both
 # as None disables notifications entirely and the pipeline behaves exactly as before.
 
 # All four notification settings come from the environment rather than being written
@@ -60,8 +60,8 @@ LAMBDA_KEY = os.environ.get("AIRQ_LAMBDA_KEY") or None
 PREFS_REFRESH_SECONDS = 240  # re-read once per collect/idle cycle
 
 # ntfy: the pipeline POSTs to a topic, you subscribe to that topic in the ntfy app.
-# The topic name IS the credential , anyone who knows it can read your alerts and post
-# to them , so use something unguessable, not "airquality".
+# The topic name IS the credential, anyone who knows it can read your alerts and post
+# to them, so use something unguessable, not "airquality".
 NTFY_SERVER = os.environ.get("AIRQ_NTFY_SERVER", "https://ntfy.sh")
 NTFY_TOPIC = os.environ.get("AIRQ_NTFY_TOPIC") or None
 
@@ -93,9 +93,9 @@ GAS_RAW_MIN, GAS_RAW_MAX = 0, 1023      # 10-bit ADC range for the MQ-135 gas se
 TEMP_ALERT_HIGH = 28.0
 HUMIDITY_ALERT_HIGH = 50.0
 SOUND_DB_ALERT_HIGH = 75.0
-LIGHT_ALERT_HIGH = 800  # matches Arduino's LIGHT_HIGH , relative to your LDR/resistor pairing
+LIGHT_ALERT_HIGH = 800  # matches Arduino's LIGHT_HIGH, relative to your LDR/resistor pairing
 FLAME_ALERT_ANY = True  # if True, any flame detection in the window triggers an alert
-# PLACEHOLDER , set this once you've measured your MQ-135's actual clean-air
+# PLACEHOLDER, set this once you've measured your MQ-135's actual clean-air
 # baseline after its warm-up period. 400 is just a starting guess.
 GAS_ALERT_HIGH = 400
 
@@ -130,7 +130,7 @@ def floats_to_decimal(obj):
 # Anchored at BOTH ends, with the sketch's literal "," separators rather than ".*?"
 # between fields. That is deliberate and load-bearing: a serial read can return half a
 # line (see SERIAL_TIMEOUT_SECONDS), and with permissive gaps a head glued to the next
-# full line still matched , ".*?" would backtrack past the second "Humidity:" and stitch
+# full line still matched, ".*?" would backtrack past the second "Humidity:" and stitch
 # temperature from one reading to light/gas from the next, producing a plausible blended
 # row that passed validation and got stored. Anchoring alone does not prevent that; the
 # strict separators are what do. Keep both if you edit the line format.
@@ -148,7 +148,7 @@ LINE_PATTERN = re.compile(
 def parse_line(line):
     """Expects Arduino output like:
     'Humidity: 48.00%  Temperature: 22.50°C , Sound Level: 412, Light: 300, Gas: 250, Flame: 0, FlameRaw: 320'
-    (Gas field is optional , will be None if not present in the line, e.g.
+    (Gas field is optional, will be None if not present in the line, e.g.
     before the gas sensor is physically installed.)
     """
     match = LINE_PATTERN.match(line)
@@ -215,7 +215,7 @@ _prefs_fetched_at = 0.0
 
 
 def refresh_prefs(force=False):
-    """Pull the app's notification settings. Failure is non-fatal , the last known good
+    """Pull the app's notification settings. Failure is non-fatal, the last known good
     settings stay in effect, because dropping to 'no channels' the moment the network
     blips is exactly when an alert matters most."""
     global _prefs, _prefs_fetched_at
@@ -324,7 +324,7 @@ def check_flame_alert(flame, flame_raw, now):
 
     Called for every valid reading in BOTH phases, unlike the averaging path. The idle
     phase used to discard lines without parsing them, so a fire starting just after a
-    window closed went unseen for up to AVERAGING_WINDOW_SECONDS + IDLE_SECONDS , around
+    window closed went unseen for up to AVERAGING_WINDOW_SECONDS + IDLE_SECONDS, around
     four minutes. Storage cadence is untouched; only alerting runs continuously.
     """
     if flame == 1:
@@ -335,7 +335,7 @@ def check_flame_alert(flame, flame_raw, now):
             _flame_alert["active"] = True
             _flame_alert["last_notified"] = now
             stamp = time.strftime("%H:%M:%S", time.localtime(now))
-            print("!!! FLAME DETECTED , sending notification !!!")
+            print("!!! FLAME DETECTED, sending notification !!!")
             notify(
                 "Flame detected" if first else "Flame still detected",
                 f"{DEVICE_ID} reported flame at {stamp} (flame_raw={flame_raw}).",
@@ -364,11 +364,11 @@ def find_serial_port():
         print("Multiple USB serial devices found; using the first. "
               "Set SERIAL_PORT explicitly to choose:")
         for p in candidates:
-            print(f"  {p.device} , {p.description}")
+            print(f"  {p.device}, {p.description}")
 
     chosen = candidates[0]
     how = "matched a known board vendor" if known else "only USB serial device present"
-    print(f"Auto-detected {chosen.device} ({chosen.description}) , {how}.")
+    print(f"Auto-detected {chosen.device} ({chosen.description}), {how}.")
     return chosen.device
 
 
@@ -452,11 +452,11 @@ def main():
     table = dynamodb.Table(TABLE_NAME)
 
     refresh_prefs(force=True)
-    print(f"Notifications , ntfy: {'on' if active_ntfy_topic() else 'off'}, "
+    print(f"Notifications, ntfy: {'on' if active_ntfy_topic() else 'off'}, "
           f"email: {'on' if email_enabled() else 'off'}"
           f"{'' if LAMBDA_BASE_URL else ' (app prefs not configured; using local settings)'}")
 
-    print(f"Listening for sensor data , {AVERAGING_WINDOW_SECONDS}s collecting, "
+    print(f"Listening for sensor data, {AVERAGING_WINDOW_SECONDS}s collecting, "
           f"then {IDLE_SECONDS}s idle, repeating... (Ctrl+C to stop)")
 
     is_collecting = True
@@ -471,7 +471,7 @@ def main():
             raw_line = ser.readline().decode("utf-8", errors="ignore")
 
             # Every line is now parsed in both phases. Only ACCUMULATION is gated on the
-            # collecting phase , the flame check below has to run continuously, or a fire
+            # collecting phase, the flame check below has to run continuously, or a fire
             # starting during the 180s idle stretch would go unnoticed until the next
             # window closed.
             if raw_line.strip():
@@ -548,7 +548,7 @@ def main():
                             "flame_raw": round(avg_flame_raw, 1),
                             "flame_detected": flame_detected_in_window,
                             "alerts": alerts,  # empty list if all clear
-                            "status": status,  # "green" / "yellow" / "red" , for the app's traffic light
+                            "status": status,  # "green" / "yellow" / "red", for the app's traffic light
                             "sample_count": len(temps),
                             "rejected_count": rejected_count,
                         }
@@ -565,9 +565,9 @@ def main():
                                 # This is the hook point for a real notification ,
                                 # e.g. send an SNS message, email, or Slack ping here.
                         else:
-                            print("Failed to store this averaging window's data , moving on.")
+                            print("Failed to store this averaging window's data, moving on.")
                     else:
-                        print(f"No valid readings this window ({rejected_count} rejected) , skipping write.")
+                        print(f"No valid readings this window ({rejected_count} rejected), skipping write.")
 
                     # switch to idle phase
                     is_collecting = False

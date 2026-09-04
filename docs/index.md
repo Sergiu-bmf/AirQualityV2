@@ -41,7 +41,7 @@ on the phone. The pipeline is the only component that writes to the table.
     flame sensor. Close the lid and the Arduino's own buzzer still fires, but no email does.
 
     **The Arduino's LEDs and the stored status are computed independently**, from thresholds
-    duplicated by hand in three places. They can disagree , see
+    duplicated by hand in three places. They can disagree, see
     [Calibration](calibration.md#thresholds-are-duplicated-in-three-places).
 
 ## What it does
@@ -55,7 +55,7 @@ on the phone. The pipeline is the only component that writes to the table.
 
 -   __Averaged windows__
 
-    60 seconds collecting, 180 idle , one averaged row every four minutes, ~360 a day.
+    60 seconds collecting, 180 idle: one averaged row every four minutes, ~360 a day.
     Sound is converted to dB from the averaged raw value, never by averaging decibels.
 
 -   __Validation before averaging__
@@ -94,6 +94,6 @@ on the phone. The pipeline is the only component that writes to the table.
 !!! note "About this documentation"
 
     The source files are always authoritative. Where this site and the code disagree,
-    the code is right and this is stale , earlier versions of these notes inlined whole
+    the code is right and this is stale, earlier versions of these notes inlined whole
     copies of the sketch and pipeline, which drifted badly, so that practice was dropped
     in favour of linking to the real files.

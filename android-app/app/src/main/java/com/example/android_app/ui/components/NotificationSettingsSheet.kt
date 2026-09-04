@@ -69,7 +69,7 @@ fun NotificationSettingsSheet(
             } else {
                 ChannelRow(
                     title = "Email via AWS SNS",
-                    subtitle = "Sent the moment a flame is detected. Check your spam folder , " +
+                    subtitle = "Sent the moment a flame is detected. Check your spam folder, " +
                         "AWS mail is frequently filtered.",
                     checked = state.emailEnabled,
                     onCheckedChange = viewModel::setEmailEnabled,
@@ -113,7 +113,7 @@ fun NotificationSettingsSheet(
                 }
 
                 Text(
-                    "Alerts are sent by the pipeline on your laptop , nothing arrives while it isn't running.",
+                    "Alerts are sent by the pipeline on your laptop, nothing arrives while it isn't running.",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

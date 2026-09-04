@@ -100,7 +100,7 @@ fun StatusCard(
 
             if (isStale) {
                 Text(
-                    text = "Newest window ended ${formatStamp(reading.windowEnd)} , the pipeline may not be running.",
+                    text = "Newest window ended ${formatStamp(reading.windowEnd)}, the pipeline may not be running.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 12.dp),

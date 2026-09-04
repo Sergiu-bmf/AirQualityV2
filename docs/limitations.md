@@ -8,7 +8,7 @@ quietly not work at the moment you needed them.
 !!! danger "Alerts exist only while the pipeline is running"
 
     The laptop is what watches the flame sensor. Close the lid and the Arduino's own buzzer
-    still fires , that is the real safety mechanism , but no email does. Nothing in the app
+    still fires (that is the real safety mechanism), but no email does. Nothing in the app
     indicates that the pipeline has stopped, beyond the coverage figure gradually falling.
 
 **A flame between sampling windows is timestamped late.** Alerting runs continuously, but
@@ -19,7 +19,7 @@ fixed-cadence coverage maths.
 
 **Alert emails land in spam.** SNS sends from a shared AWS address with no domain alignment;
 the confirmation was flagged as suspicious. A mail rule for `sns.amazonaws.com` is effectively
-required for this to work as an alarm , see [Cloud](cloud.md#sns).
+required for this to work as an alarm, see [Cloud](cloud.md#sns).
 
 **A validation floor can silence a whole window.** `is_valid_reading()` rejects the entire
 reading if any field is out of range, and `HUMIDITY_MIN = 20` sits above what a dry heated
@@ -31,7 +31,7 @@ rejected means no row at all, which is indistinguishable from the laptop being o
 !!! danger "There is no real authentication"
 
     The Lambda Function URL is `authType: NONE`, guarded only by a shared secret in a query
-    parameter , which appears in browser history, server logs and shell history. Worse, the
+    parameter, which appears in browser history, server logs and shell history. Worse, the
     check is **skipped entirely** when `SHARED_SECRET` is unset, so a missing environment
     variable silently makes reads fully public.
 
@@ -44,21 +44,21 @@ Anyone with the secret can read all sensor history and change the notification a
 **Lux is an assumed curve.** The divider maths is exact, but the LDR is an unmarked kit
 component and the conversion assumes a GL5528. Observed indoor readings of 0.0–0.2 lux are
 far too dark for a lit room, so the scale is likely off by a large factor. Relative change is
-still meaningful. One measurement with a phone lux meter would fix it , see
+still meaningful. One measurement with a phone lux meter would fix it, see
 [Calibration](calibration.md#light-ldr).
 
 **Gas is still raw ADC.** The Rs/R₀ conversion is implemented and dormant, waiting on the
 MQ-135's clean-air baseline after warm-up. Its alert threshold is still the placeholder 400,
-and readings sit at 320–380 , close enough that a small drift would produce constant alerts.
+and readings sit at 320–380, close enough that a small drift would produce constant alerts.
 
 **Sound dB is phone-calibrated.** Four points against a phone app, valid only across ~40–80 dB.
 Good for trends, not for any claim about absolute loudness.
 
-**The flame sensor's resting value drifts** with ambient infrared , observed between ~8 and
+**The flame sensor's resting value drifts** with ambient infrared, observed between ~8 and
 ~56 raw against a threshold of 150. Still workable headroom, but worth re-checking before
 trusting overnight alerting, since a false trip now sends email.
 
-**Temperature and humidity are DHT11 grade** , ±2 °C and ±5 %, and the sensor is rated only
+**Temperature and humidity are DHT11 grade**, ±2 °C and ±5 %, and the sensor is rated only
 0–50 °C and 20–90 % RH.
 
 ## Structure

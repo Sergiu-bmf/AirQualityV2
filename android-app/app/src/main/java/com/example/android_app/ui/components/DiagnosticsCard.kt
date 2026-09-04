@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
  *
  * Coverage is measured against the pipeline's fixed cadence (one window every
  * [PipelineTiming.WINDOW_SECONDS]), so a low percentage means the laptop-side pipeline
- * wasn't running , not that the sensors were quiet. The rejected count comes from
+ * wasn't running, not that the sensors were quiet. The rejected count comes from
  * `is_valid_reading()` upstream: a persistently high share points at a flaky DHT11 or
  * loose wiring rather than at the environment.
  */
